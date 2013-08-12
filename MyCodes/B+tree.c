@@ -1,4 +1,4 @@
-//IMPLEMENTATION OF B+ TREE IN CPP
+//IMPLEMENTATION OF B+ TREE IN C
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
