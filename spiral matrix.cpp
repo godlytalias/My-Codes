@@ -20,7 +20,7 @@ Copyright (c) 2013 GODLY T.ALIAS
 
 //This is program for spiral matrix. Spiral Matrix is a matrix with
 //the middle element as 0 and will be incremented by 1 as it goes out spirally
-//eg: n=8
+//eg: n=3
 //           4 3 2
 //           5 0 1
 //           6 7 8
