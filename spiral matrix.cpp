@@ -44,7 +44,7 @@ if((abs((n/2)-i)==key) && (abs((n/2)-j)==key))
 
 int main(){
     int i,j,count=1,temp;
-    cout<<"Enter n : ";
+    cout<<"Enter n(<19) : ";
     cin>>n;
     
 int sp[20][20],key,dir;
@@ -93,6 +93,5 @@ for(j=0;j<n;j++)
 cout<<std::setw(4)<<sp[i][j];
 cout<<"\n";}
 
-cin>>n;
 return 0;
 }
