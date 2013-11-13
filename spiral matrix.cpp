@@ -55,7 +55,9 @@ int main(){
     int i,j,count=1,temp;
     cout<<"Enter n (<50): ";
     cin>>n;
-     
+    
+    if(n%2==0)
+    n++; //making n odd
 int sp[50][50],key,dir;
  
 for(i=0;i<n;i++)
