@@ -1,0 +1,27 @@
+input[type="submit"]:hover {-moz-transform: scale(1.2); }
+
+body
+{
+background-image: url(fireringd.gif);
+background-repeat: repeat;
+}
+
+@-webkit-keyframes myanimation
+{
+from {background :red;}
+to {background :#777777; }
+}
+
+#details
+{
+padding:2px 2px;
+margin:auto;
+position:relative;
+-webkit-animation:myanimation 5s;
+}
+
+#buttons
+{
+margin:auto;
+position:relative;
+}
