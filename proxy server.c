@@ -4,7 +4,6 @@
 #include<string.h>
 #include<sys/types.h>
 #include<sys/socket.h>
-//#include<sys/ioctl.h>
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include<netdb.h>
@@ -18,14 +17,16 @@ exit(0);
  
 int main(int argc,char* argv[])
 {
-struct sockaddr_in addr_in,cli_addr,serv_addr,host_addr;
+pid_t pid;
+struct sockaddr_in addr_in,cli_addr,serv_addr;
 struct hostent* host;
-int flag=0,newsockfd,sockfd,newsockfd1,sockfd1,n,port=0,i;
-char buffer[1000],t1[400],t2[400],t3[10];
-char* temp=NULL;
+int newsockfd,sockfd;
  
 if(argc<2)
 error("./proxy <port_no>");
+
+printf("\n*****WELCOME TO PROXY SERVER*****\n");
+printf("\nCopyright (c) 2014  GODLY T.ALIAS\n\n");
  
 bzero((char*)&serv_addr,sizeof(serv_addr));
 bzero((char*)&cli_addr, sizeof(cli_addr));
@@ -34,21 +35,31 @@ serv_addr.sin_family=AF_INET;
 serv_addr.sin_port=htons(atoi(argv[1]));
 serv_addr.sin_addr.s_addr=INADDR_ANY;
  
- 
+
 sockfd=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 if(sockfd<0)
 error("Problem in initializing socket");
  
 if(bind(sockfd,(struct sockaddr*)&serv_addr,sizeof(serv_addr))<0)
 error("Error on binding");
- while(1){
-listen(sockfd,5);
+
+
+listen(sockfd,50);
 int clilen=sizeof(cli_addr);
+
+accepting:
 newsockfd=accept(sockfd,(struct sockaddr*)&cli_addr,&clilen);
  
 if(newsockfd<0)
 error("Problem in accepting connection");
- 
+
+pid=fork();
+if(pid==0)
+{
+struct sockaddr_in host_addr;
+int flag=0,newsockfd1,sockfd1,n,port=0,i;
+char buffer[1000],t1[400],t2[400],t3[10];
+char* temp=NULL;
 bzero((char*)buffer,1000);
 recv(newsockfd,buffer,1000,0);
  
@@ -115,33 +126,36 @@ printf("\n%s\n",buffer);
 //send(newsockfd,buffer,strlen(buffer),0);
 bzero((char*)buffer,sizeof(buffer));
 if(temp!=NULL)
-sprintf(buffer,"GET /%s %s\r\nHost: %s\r\n\r\n",temp,t3,t2);
+sprintf(buffer,"GET /%s %s\r\nHost: %s\r\nConnection: close\r\n\r\n",temp,t3,t2);
 else
-sprintf(buffer,"GET / %s\r\nHost: %s\r\n\r\n",t3,t2);
+sprintf(buffer,"GET / %s\r\nHost: %s\r\nConnection: close\r\n\r\n",t3,t2);
+sending:
 n=send(sockfd1,buffer,strlen(buffer),0);
 printf("\n%s\n",buffer);
 if(n<0)
 error("Error writing to socket");
- 
- int count;
+else{
 do
 {
-bzero((char*)buffer,100);
-n=recv(sockfd1,buffer,100,0);
-/*ioctl(sockfd1,FIONREAD,&count);*/
+bzero((char*)buffer,500);
+n=recv(sockfd1,buffer,500,0);
 if(n<0)
 error("Error reading from socket");
-// printf("%d-%d\n",n,count);
+else
 send(newsockfd,buffer,strlen(buffer),0);
-}while(n>99);
-close(sockfd1);
+}while(n>0);
+//close(sockfd1);
+}
 }
 else
 {
 send(newsockfd,"400 : BAD REQUEST\nONLY HTTP REQUESTS ALLOWED",18,0);
 }
  
-close(newsockfd); }
+close(newsockfd);
+}
+else
+goto accepting;
 close(sockfd);
 return 0;
 }
