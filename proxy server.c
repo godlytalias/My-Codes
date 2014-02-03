@@ -144,7 +144,7 @@ error("Error reading from socket");
 else
 send(newsockfd,buffer,strlen(buffer),0);
 }while(n>0);
-//close(sockfd1);
+close(sockfd1);
 }
 }
 else
@@ -156,6 +156,6 @@ close(newsockfd);
 }
 else
 goto accepting;
-close(sockfd);
+//close(sockfd);
 return 0;
 }
