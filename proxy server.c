@@ -60,7 +60,7 @@ pid=fork();
 if(pid==0)
 {
 struct sockaddr_in host_addr;
-int flag=0,newsockfd1,sockfd1,n,port=0,i;
+int flag=0,newsockfd1,n,port=0,i,sockfd1;
 char buffer[510],t1[300],t2[300],t3[10];
 char* temp=NULL;
 bzero((char*)buffer,500);
@@ -152,10 +152,15 @@ else
 {
 send(newsockfd,"400 : BAD REQUEST\nONLY HTTP REQUESTS ALLOWED",18,0);
 }
+close(sockfd1);
 close(newsockfd);
+close(sockfd);
+_exit(0);
 }
 else
+{
+close(newsockfd);
 goto accepting;
-close(sockfd);
+}
 return 0;
 }
