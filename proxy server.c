@@ -14,14 +14,6 @@ void error(char* msg)
 perror(msg);
 exit(0);
 }
-
-int connected(int sock)
-{
-int error = 0;
-socklen_t len = sizeof (error);
-int retval = getsockopt (sock, SOL_SOCKET, SO_ERROR, &error, &len );
-return retval;
-}
  
 int main(int argc,char* argv[])
 {
