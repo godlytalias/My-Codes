@@ -1,3 +1,6 @@
+//Basic Concept: Adjacency Matrices of Isomorphic Graphs can be made identical
+//by swapping the vertices (rows & columns)
+
 #include<iostream>
 using namespace std;
 
