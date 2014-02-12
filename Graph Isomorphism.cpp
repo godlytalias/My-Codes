@@ -29,11 +29,9 @@ int va[100],vb[100],tempc;
 bool isomorphism;
 cout<<"Enter the no: of vertices in Graph-1\n";
 cin>>n1;
-cout<<"\nEnter the vertices of Graph-1\n";
 for(i=0;i<n1;i++)
 {
-cout<<"\nVertex-"<<i<<" - ";
-cin>>va[i];
+	va[i]=i+1; //naming vertices numerically
 }
 cout<<"\nEnter the adjacency matrix of Graph-1\n";
 for(i=0;i<n1;i++)
@@ -42,11 +40,9 @@ cin>>a[i][j];
 
 cout<<"Enter the no: of vertices in Graph-2\n";
 cin>>n2;
-cout<<"\nEnter the vertices of Graph-2\n";
 for(i=0;i<n2;i++)
 {
-cout<<"\nVertex-"<<i<<" - ";
-cin>>vb[i];
+	vb[i]=i+1; //naming vertices numerically
 }
 cout<<"\nEnter the adjacency matrix of Graph-2\n";
 for(i=0;i<n2;i++)
@@ -87,6 +83,11 @@ if(n1==n2)
 			tempi=b[i][n];   //swapping the row-sums
 			b[i][n]=b[j][n];
 			b[j][n]=tempi;
+			
+			tempi=b[n][i];  //swapping the col-sums as well
+			b[n][i]=b[n][j];
+			b[n][j]=tempi;
+			
 			tempc=vb[i];	//swapping the vertex names accordingly
 			vb[i]=vb[j];
 			vb[j]=tempc;
