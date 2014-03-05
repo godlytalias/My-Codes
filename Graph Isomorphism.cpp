@@ -2,8 +2,9 @@
 #include<fstream>
 using namespace std;
 
-bool isotest(float **a,float **b)
+bool isotest(float **p1,float **p2,float **a1,float **a2)
 {
+
 return false;
 }
 
@@ -32,6 +33,7 @@ if(c1==r2){
  }
 }}
 
+//calculates the probability propogation matrix for the initial state initstate
 float** prob_prop_matrix(float **p, float **g, int n, int initstate)
 {
 //dynamically allocating array for probability distribution matrix
@@ -84,7 +86,7 @@ for(int i=0;i<n;i++){
 int main()
 {
 int i,j,n1=0,n2=0,deg=0;
-float **g1,**g2,**p1=NULL,**p2=NULL;
+float **g1,**g2,**p1=NULL,**p2=NULL,**b1,**b2;
 char ch;
 bool iso=false;
 ch=' ';
@@ -101,13 +103,18 @@ n1++;
 
 //dynamically allocating array
 g1 = new float*[n1];
-for(i=0;i<n1;i++)
+b1 = new float*[n1];
+for(i=0;i<n1;i++){
 g1[i]=new float[n1];
+b1[i]=new float[n1];
+}
 
 fseek(read1,0,SEEK_SET);
 for(i=0;i<n1;i++)
-for(j=0;j<n1;j++)
+for(j=0;j<n1;j++){
 fscanf(read1,"%f",&g1[i][j]);
+b1[i][j]=g1[i][j];
+}
 
 fclose(read1);
 ch=' ';
@@ -125,18 +132,23 @@ n2++;
 
 //dynamically allocating array
 g2 = new float*[n2];
-for(i=0;i<n2;i++)
+b2 = new float*[n2];
+for(i=0;i<n2;i++){
 g2[i]=new float[n2];
+b2[i]=new float[n2];
+}
 
 fseek(read2,0,SEEK_SET);
 for(i=0;i<n2;i++)
-for(j=0;j<n2;j++)
+for(j=0;j<n2;j++){
 fscanf(read2,"%f",&g2[i][j]);
+b2[i][j]=g2[i][j];
+}
 
 fclose(read2);
 //computing probability distribution matrices of both graphs
-prob_dibn(g1,n1);
-prob_dibn(g2,n2);
+prob_dibn(b1,n1);
+prob_dibn(b2,n2);
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
@@ -144,12 +156,12 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
  iso=false;
  while(i<n1 && iso==false)
  {
-  p1=prob_prop_matrix(p1,g1,n1,1);
+  p1=prob_prop_matrix(p1,b1,n1,1);
   j=1;
   while(j<n2 && iso==false)
   {
-   p2=prob_prop_matrix(p2,g2,n2,1);
-   iso = isotest(p1,p2);
+   p2=prob_prop_matrix(p2,b2,n2,1);
+   iso = isotest(p1,p2,g1,g2);
    j++;
    //deleting the memory for the probability propogation matrix
    for(i = 0; i < (2*n2)-1; i++) {
@@ -169,7 +181,7 @@ else
  iso=false;
 
 
-//deleting memory
+//deleting memory allocated for arrays
 for(i = 0; i < n1; i++) {
     delete [] g1[i];
 }
@@ -178,6 +190,14 @@ for(i = 0; i < n2; i++) {
     delete [] g2[i];
 }
 delete [] g2;
+for(i = 0; i < n1; i++) {
+    delete [] b1[i];
+}
+delete [] b1;
+for(i = 0; i < n2; i++) {
+    delete [] b2[i];
+}
+delete [] b2;
 
 return 0;
 }
