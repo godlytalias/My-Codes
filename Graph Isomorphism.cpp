@@ -2,6 +2,11 @@
 #include<fstream>
 using namespace std;
 
+bool isotest(float **a,float **b)
+{
+return false;
+}
+
 float *row_mat,*row_mat_copy;
 //returns the initial state distribution vector
 void istate_dibn_vec(float* init_state, int i,int n)
@@ -49,6 +54,8 @@ row_mat_copy[j]=row_mat[j];}
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
 
+delete [] row_mat;
+delete [] row_mat_copy;
 return p;
 }
 
@@ -79,6 +86,7 @@ int main()
 int i,j,n1=0,n2=0,deg=0;
 float **g1,**g2,**p1=NULL,**p2=NULL;
 char ch;
+bool iso=false;
 ch=' ';
 FILE *read1 = fopen("g1","r");
 //reading the adjacent matrix of Graph 1
@@ -101,6 +109,7 @@ for(i=0;i<n1;i++)
 for(j=0;j<n1;j++)
 fscanf(read1,"%f",&g1[i][j]);
 
+fclose(read1);
 ch=' ';
 
 FILE *read2 = fopen("g2","r");
@@ -124,22 +133,41 @@ for(i=0;i<n2;i++)
 for(j=0;j<n2;j++)
 fscanf(read2,"%f",&g2[i][j]);
 
+fclose(read2);
 //computing probability distribution matrices of both graphs
 prob_dibn(g1,n1);
 prob_dibn(g2,n2);
 
-p1=prob_prop_matrix(p1,g1,n1,1);
-p2=prob_prop_matrix(p2,g2,n2,1);
-
-
-for(i=0;i<((2*n1)-1);i++){
-for(j=0;j<n1;j++)
-cout<<p1[i][j]<<" ";
-cout<<"\n";
+if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
+{
+ i=1;
+ iso=false;
+ while(i<n1 && iso==false)
+ {
+  p1=prob_prop_matrix(p1,g1,n1,1);
+  j=1;
+  while(j<n2 && iso==false)
+  {
+   p2=prob_prop_matrix(p2,g2,n2,1);
+   iso = isotest(p1,p2);
+   j++;
+   //deleting the memory for the probability propogation matrix
+   for(i = 0; i < (2*n2)-1; i++) {
+    delete [] p2[i];
+   }
+   delete [] p2;
+  }
+  i++;
+  //deleting the memory for probability propogation matrix
+  for(i = 0; i < (2*n1)-1; i++) {
+    delete [] p1[i];
+  }
+  delete [] p1;
+ }
 }
+else
+ iso=false;
 
-fclose(read1);
-fclose(read2);
 
 //deleting memory
 for(i = 0; i < n1; i++) {
@@ -150,16 +178,6 @@ for(i = 0; i < n2; i++) {
     delete [] g2[i];
 }
 delete [] g2;
-for(i = 0; i < (2*n1)-1; i++) {
-    delete [] p1[i];
-}
-delete [] p1;
-for(i = 0; i < (2*n2)-1; i++) {
-    delete [] p2[i];
-}
-delete [] p2;
-delete [] row_mat;
-delete [] row_mat_copy;
 
 return 0;
 }
