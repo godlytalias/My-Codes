@@ -2,40 +2,54 @@
 #include<fstream>
 using namespace std;
 
-int *init_state; //initial state variable
-
+float *init_state; //initial state variable
+float *row_mat,*row_mat_copy;
 //returns the initial state distribution vector
-int* istate_dibn_vec(int i,int n)
+float* istate_dibn_vec(int i,int n)
 {
-init_state = new int[n];
+init_state = new float[n];
 for(int j=0;j<n;j++)
  if(j==i)
-  init_state[j]=1;
+  init_state[j]=1.0;
  else
-  init_state[j]=0;
+  init_state[j]=0.0;
 return init_state;
 }
 
 //computes the product of matrices m1 & m2 and write the result in res matrix
 template <typename T>
-void matrix_prod(T **res,T **m1,int r1,int c1,T **m2,int r2,int c2)
+void matrix_prod(T *res,T *m1,int c1,T **m2,int r2,int c2)
 {
 int sum;
 if(c1==r2){
-for(int i=0;i<r1;i++){
- for(int j=0;j<c1;j++){
+ for(int j=0;j<c2;j++){
  sum=0;
   for(int k=0;k<c1;k++)
-  sum+=(m1[i][k]*m2[k][j]);
- res[i][j]=sum;
+  sum+=(m1[k]*m2[k][j]);
+ res[j]=sum;
  }
-}
-
 }}
 
-void prob_prop_matrix(float **m)
+void prob_prop_matrix(float **p, float **g, int n, int initstate)
 {
+//dynamically allocating array for probability distribution matrix
+p = new float*[(2*n)-1];
+for(int i=0;i<((2*n)-1);i++)
+p[i]=new float[n];
+//row_mat holds the value of each state distribution vector
+row_mat = new float[n];
+row_mat_copy = new float[n];
 
+row_mat = istate_dibn_vec(initstate,n);
+for(int i=0;i<((2*n)-1);i++)
+{
+//copying state distribution vector to probability propogation matrix
+for(int j=0;j<n;j++){
+p[i][j]=row_mat[j];
+row_mat_copy[j]=row_mat[j];}
+//calculating the state distribution vector for string of next length
+matrix_prod(row_mat,row_mat_copy,n,g,n,n);
+}
 }
 
 //returns the degree of a vertix
@@ -114,14 +128,7 @@ fscanf(read2,"%f",&g2[i][j]);
 prob_dibn(g1,n1);
 prob_dibn(g2,n2);
 
-//dynamically allocating array for probability distribution matrix
-p1 = new float*[n1];
-for(i=0;i<n1;i++)
-p1[i]=new float[n1];
 
-p2 = new float*[n2];
-for(i=0;i<n2;i++)
-p2[i]=new float[n2];
 
 fclose(read1);
 fclose(read2);
@@ -144,6 +151,8 @@ for(i = 0; i < n2; i++) {
 }
 delete [] p2;
 delete [] init_state;
+delete [] row_mat;
+delete [] row_mat_copy;
 
 return 0;
 }
