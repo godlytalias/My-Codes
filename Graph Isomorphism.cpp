@@ -14,8 +14,7 @@ mapping **map_g;
 //check whether the two matrices m1 & m2 are equal
 bool eq_matrix(float **m1,float **m2)
 {
-if(n1!=n2)
- return false;
+//n1==n2
 for(int i=0;i<n1;i++)
  for(int j=0;j<n1;j++)
   {
@@ -65,11 +64,29 @@ else
  merge(a,start,start,end,end,mat);
 }
 
-bool isotest(float **p1,float **p2,float **a1,float **a2)
+bool adj_mat_map(float **a1, float **a2)
+{
+//n1==n2
+for(int i=0;i<n1;i++)
+ for(int j=0;j<n1;j++)
+  if(a1[map_g[0][i].map_ver][map_g[0][j].map_ver]!=a2[map_g[1][i].map_ver][map_g[1][j].map_ver])
+   return false;
+return true;
+}
+
+int isotest(float **p1,float **p2,float **a1,float **a2)
 {
 mergesort(p1,0,n1-1,0);
 mergesort(p2,0,n2-1,1);
-return eq_matrix(p1,p2);
+if(eq_matrix(p1,p2))
+ {
+  if(adj_mat_map(a1,a2))
+   return 2;
+  else
+   return 1;
+ }
+else
+ return 0;
 }
 
 float *row_mat,*row_mat_copy;
@@ -149,10 +166,9 @@ for(int i=0;i<n;i++){
 
 int main()
 {
-int i,j,deg=0,pi,pj;
+int i,j,deg=0,pi,pj,iso=0;
 float **g1,**g2,**p1=NULL,**p2=NULL,**b1,**b2;
 char ch;
-bool iso=false;
 ch=' ';
 FILE *read1 = fopen("g1","r");
 //reading the adjacent matrix of Graph 1
@@ -225,12 +241,12 @@ prob_dibn(b2,n2);
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
  pi=1;
- iso=false;
- while(pi<n1 && iso==false)
+ iso=0;
+ while(pi<n1 && iso==0)
  {
   p1=prob_prop_matrix(p1,b1,n1,pi);
   pj=1;
-  while(pj<n2 && iso==false)
+  while(pj<n2 && iso==0)
   {
    p2=prob_prop_matrix(p2,b2,n2,pj);
    iso = isotest(p1,p2,g1,g2);
@@ -250,9 +266,9 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
  }
 }
 else
- iso=false;
+ iso=0;
 
-if(iso)
+if(iso==2)
 {
 cout<<"ISOMORPHIC MAPPING\n";
 for(i=0;i<n1;i++)
