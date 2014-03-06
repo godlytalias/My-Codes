@@ -252,7 +252,14 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 else
  iso=false;
 
-
+if(iso)
+{
+cout<<"ISOMORPHIC MAPPING\n";
+for(i=0;i<n1;i++)
+cout<<map_g[0][i].map_ver<<"->"<<map_g[1][i].map_ver<<"\n";
+}
+else
+cout<<"NOT ISOMORPHIC\n";
 
 //deleting memory allocated for arrays
 for(i = 0; i < n1; i++) {
