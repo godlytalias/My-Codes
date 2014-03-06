@@ -53,6 +53,7 @@ int i,j,l,temp;
      map_g[mat][k].map_ver=map_g[mat][k-1].map_ver;
      map_g[mat][i].map_ver=temp;
      j++;
+     i++; e1++;
     }
   }
  }
@@ -257,10 +258,10 @@ prob_dibn(b2,n2);
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
  iso=0;
- for(pi=0;(pi<n1)&&(iso==0);pi++)
+ for(pi=0;(pi<n1)&&(iso!=2);pi++)
  {
   p1=prob_prop_matrix(p1,b1,n1,pi);
-  for(pj=0;(pj<n2)&&(iso==0);pj++)
+  for(pj=0;(pj<n2)&&(iso!=2);pj++)
   {
    p2=prob_prop_matrix(p2,b2,n2,pj);
    iso = isotest(p1,p2,g1,g2);
