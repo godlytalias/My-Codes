@@ -166,20 +166,25 @@ for(int i=0;i<n;i++){
 
 int main()
 {
-int i,j,deg=0,pi,pj,iso=0;
+int i,j,mode,deg=0,pi,pj,iso=0;
 float **g1,**g2,**p1=NULL,**p2=NULL,**b1,**b2;
 char ch;
 ch=' ';
+mode=0;
 FILE *read1 = fopen("g1","r");
 //reading the adjacent matrix of Graph 1
 //first checking the no: of elements in a row
 while(ch!='\n')
 {
 ch = fgetc(read1);
-if(ch==' ')
-n1++;
+ if(ch>=48 && ch<=57 && mode==0)
+ {
+  mode=1;
+  n1++;
+ }
+ else if(ch<48 || ch>57)
+  mode=0;
 }
-n1++;
 
 //dynamically allocating array
 map_g = new mapping*[2];
@@ -202,17 +207,21 @@ b1[i][j]=g1[i][j];
 
 fclose(read1);
 ch=' ';
-
+mode=0;
 FILE *read2 = fopen("g2","r");
 //reading the adjacent matrix of Graph 2
 //first checking the no: of elements in a row
 while(ch!='\n')
 {
 ch = fgetc(read2);
-if(ch==' ')
-n2++;
+ if(ch>=48 && ch<=57 && mode==0)
+ {
+  mode=1;
+  n2++;
+ }
+ else if(ch==' ')
+  mode=0;
 }
-n2++;
 
 //dynamically allocating array
 map_g[1]=new mapping[n2];
@@ -240,24 +249,20 @@ prob_dibn(b2,n2);
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
- pi=1;
  iso=0;
- while(pi<n1 && iso==0)
+ for(pi=0;(pi<n1)&&(iso==0);pi++)
  {
   p1=prob_prop_matrix(p1,b1,n1,pi);
-  pj=1;
-  while(pj<n2 && iso==0)
+  for(pj=0;(pj<n2)&&(iso==0);pj++)
   {
    p2=prob_prop_matrix(p2,b2,n2,pj);
    iso = isotest(p1,p2,g1,g2);
-   pj++;
    //deleting the memory for the probability propogation matrix
    for(i = 0; i < (2*n2)-1; i++) {
     delete [] p2[i];
    }
    delete [] p2;
   }
-  pi++;
   //deleting the memory for probability propogation matrix
   for(i = 0; i < (2*n1)-1; i++) {
     delete [] p1[i];
