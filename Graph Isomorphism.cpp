@@ -6,11 +6,24 @@ int n1=0,n2=0;
 
 struct mapping
 {
-int org_ver;
 int map_ver;
 };
 
 mapping **map_g;
+
+//check whether the two matrices m1 & m2 are equal
+bool eq_matrix(float **m1,float **m2)
+{
+if(n1!=n2)
+ return false;
+for(int i=0;i<n1;i++)
+ for(int j=0;j<n1;j++)
+  {
+   if(m1[i][map_g[0][j].map_ver]!=m2[i][map_g[1][j].map_ver])
+    return false;
+  } 
+return true;
+}
 
 //merge the partitions made by the mergesort
 void merge(float **a,int s1,int e1,int s2,int e2,int mat)
@@ -54,8 +67,9 @@ else
 
 bool isotest(float **p1,float **p2,float **a1,float **a2)
 {
-
-return false;
+mergesort(p1,0,n1-1,0);
+mergesort(p2,0,n2-1,1);
+return eq_matrix(p1,p2);
 }
 
 float *row_mat,*row_mat_copy;
@@ -135,7 +149,7 @@ for(int i=0;i<n;i++){
 
 int main()
 {
-int i,j,deg=0;
+int i,j,deg=0,pi,pj;
 float **g1,**g2,**p1=NULL,**p2=NULL,**b1,**b2;
 char ch;
 bool iso=false;
@@ -160,7 +174,7 @@ b1 = new float*[n1];
 for(i=0;i<n1;i++){
 g1[i]=new float[n1];
 b1[i]=new float[n1];
-map_g[0][i].org_ver=map_g[0][i].map_ver=i;
+map_g[0][i].map_ver=i;
 }
 
 fseek(read1,0,SEEK_SET);
@@ -193,7 +207,7 @@ b2 = new float*[n2];
 for(i=0;i<n2;i++){
 g2[i]=new float[n2];
 b2[i]=new float[n2];
-map_g[1][i].org_ver=map_g[1][i].map_ver = i;
+map_g[1][i].map_ver = i;
 }
 
 fseek(read2,0,SEEK_SET);
@@ -210,24 +224,24 @@ prob_dibn(b2,n2);
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
- i=1;
+ pi=1;
  iso=false;
- while(i<n1 && iso==false)
+ while(pi<n1 && iso==false)
  {
   p1=prob_prop_matrix(p1,b1,n1,1);
-  j=1;
-  while(j<n2 && iso==false)
+  pj=1;
+  while(pj<n2 && iso==false)
   {
    p2=prob_prop_matrix(p2,b2,n2,1);
    iso = isotest(p1,p2,g1,g2);
-   j++;
+   pj++;
    //deleting the memory for the probability propogation matrix
    for(i = 0; i < (2*n2)-1; i++) {
     delete [] p2[i];
    }
    delete [] p2;
   }
-  i++;
+  pi++;
   //deleting the memory for probability propogation matrix
   for(i = 0; i < (2*n1)-1; i++) {
     delete [] p1[i];
@@ -238,11 +252,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 else
  iso=false;
 
-mergesort(g1,0,n1-1,0);
-for(j=0;j<n1;j++)
-{
-cout<<map_g[0][j].org_ver<<"->"<<map_g[0][j].map_ver<<"\n";
-}
+
 
 //deleting memory allocated for arrays
 for(i = 0; i < n1; i++) {
