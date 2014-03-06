@@ -2,6 +2,56 @@
 #include<fstream>
 using namespace std;
 
+int n1=0,n2=0;
+
+struct mapping
+{
+int org_ver;
+int map_ver;
+};
+
+mapping **map_g;
+
+//merge the partitions made by the mergesort
+void merge(float **a,int s1,int e1,int s2,int e2,int mat)
+{
+int i,j,l,temp;
+ if(s1<e2 && (e1+1)==s2)
+ {
+  i=s1;
+  j=s2;
+  while(i<=e1 && j<=e2)
+  {
+   l=0;
+   while((a[l][map_g[mat][i].map_ver]==a[l][map_g[mat][j].map_ver]) && l<(n1-1))
+   l++;
+   if(a[l][map_g[mat][i].map_ver]<a[l][map_g[mat][j].map_ver])
+   i++;
+   else if(a[l][map_g[mat][i].map_ver]>=a[l][map_g[mat][j].map_ver])
+    {
+     temp = map_g[mat][j].map_ver;
+     for(int k=j;k>i;k--)
+     map_g[mat][k].map_ver=map_g[mat][k-1].map_ver;
+     map_g[mat][i].map_ver=temp;
+     j++;
+    }
+  }
+ }
+}
+
+//mergesort the matrix a and write the mapping to g_map[mat]
+void mergesort(float **a,int start, int end,int mat)
+{
+if(start<(end-1))
+ {
+ mergesort(a,start,(start+end)/2,mat);
+ mergesort(a,((start+end)/2)+1,end,mat);
+ merge(a,start,(start+end)/2,((start+end)/2)+1,end,mat);
+ }
+else
+ merge(a,start,start,end,end,mat);
+}
+
 bool isotest(float **p1,float **p2,float **a1,float **a2)
 {
 
@@ -85,7 +135,7 @@ for(int i=0;i<n;i++){
 
 int main()
 {
-int i,j,n1=0,n2=0,deg=0;
+int i,j,deg=0;
 float **g1,**g2,**p1=NULL,**p2=NULL,**b1,**b2;
 char ch;
 bool iso=false;
@@ -102,11 +152,15 @@ n1++;
 n1++;
 
 //dynamically allocating array
+map_g = new mapping*[2];
+map_g[0]=new mapping[n1];
+
 g1 = new float*[n1];
 b1 = new float*[n1];
 for(i=0;i<n1;i++){
 g1[i]=new float[n1];
 b1[i]=new float[n1];
+map_g[0][i].org_ver=map_g[0][i].map_ver=i;
 }
 
 fseek(read1,0,SEEK_SET);
@@ -131,11 +185,15 @@ n2++;
 n2++;
 
 //dynamically allocating array
+map_g[1]=new mapping[n2];
+
 g2 = new float*[n2];
 b2 = new float*[n2];
+
 for(i=0;i<n2;i++){
 g2[i]=new float[n2];
 b2[i]=new float[n2];
+map_g[1][i].org_ver=map_g[1][i].map_ver = i;
 }
 
 fseek(read2,0,SEEK_SET);
@@ -180,6 +238,11 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 else
  iso=false;
 
+mergesort(g1,0,n1-1,0);
+for(j=0;j<n1;j++)
+{
+cout<<map_g[0][j].org_ver<<"->"<<map_g[0][j].map_ver<<"\n";
+}
 
 //deleting memory allocated for arrays
 for(i = 0; i < n1; i++) {
@@ -198,6 +261,10 @@ for(i = 0; i < n2; i++) {
     delete [] b2[i];
 }
 delete [] b2;
+for(i=0;i<=1;i++)  {
+    delete [] map_g[i];
+}
+delete [] map_g;
 
 return 0;
 }
