@@ -228,11 +228,11 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
  iso=false;
  while(pi<n1 && iso==false)
  {
-  p1=prob_prop_matrix(p1,b1,n1,1);
+  p1=prob_prop_matrix(p1,b1,n1,pi);
   pj=1;
   while(pj<n2 && iso==false)
   {
-   p2=prob_prop_matrix(p2,b2,n2,1);
+   p2=prob_prop_matrix(p2,b2,n2,pj);
    iso = isotest(p1,p2,g1,g2);
    pj++;
    //deleting the memory for the probability propogation matrix
