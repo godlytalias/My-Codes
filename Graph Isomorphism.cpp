@@ -22,11 +22,11 @@ mapping **map_g;
 bool eq_matrix(float **m1,float **m2)
 {
 //n1==n2
-for(int i=0;i<n1;i++)
+for(int i=0;i<((2*n1)-1);i++)
  for(int j=0;j<n1;j++)
   {
-   if(m1[i][map_g[0][j].map_ver]!=m2[i][map_g[1][j].map_ver])
-    return false;
+   if(m1[i][map_g[0][j].map_ver]!=m2[i][map_g[1][j].map_ver]){
+    return false;}
   } 
 return true;
 }
@@ -112,13 +112,11 @@ for(int j=0;j<n;j++)
 template <typename T>
 void matrix_prod(T *res,T *m1,int c1,T **m2,int r2,int c2)
 {
-float sum;
 if(c1==r2){
  for(int j=0;j<c2;j++){
- sum=0;
+ res[j]=0;
   for(int k=0;k<c1;k++)
-  sum+=(m1[k]*m2[k][j]);
- res[j]=sum;
+  res[j]+=(m1[k]*m2[k][j]);
  }
 }}
 
