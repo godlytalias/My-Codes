@@ -118,7 +118,7 @@ if(c1==r2){
  res[j]=0;
  c=0.0;
   for(int k=0;k<c1;k++){
-//kahan summation
+//kahan summation to avoid precision lose
   y=(m1[k]*m2[k][j])-c;
   t=res[j]+y;
   c = (t-res[j])-y;
