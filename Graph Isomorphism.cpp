@@ -112,11 +112,17 @@ for(int j=0;j<n;j++)
 template <typename T>
 void matrix_prod(T *res,T *m1,int c1,T **m2,int r2,int c2)
 {
+float y,t,c;
 if(c1==r2){
  for(int j=0;j<c2;j++){
  res[j]=0;
-  for(int k=0;k<c1;k++)
-  res[j]+=(m1[k]*m2[k][j]);
+ c=0.0;
+  for(int k=0;k<c1;k++){
+//kahan summation
+  y=(m1[k]*m2[k][j])-c;
+  t=res[j]+y;
+  c = (t-res[j])-y;
+  res[j]=t;}
  }
 }}
 
