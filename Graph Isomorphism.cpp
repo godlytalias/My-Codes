@@ -179,7 +179,7 @@ for(int i=0;i<n;i++){
 int main()
 {
 int i,j,mode,deg=0,pi,pj,iso=0;
-float **g1,**g2,**p1=NULL,**p2=NULL,**b1,**b2;
+float **g1,**g2,**p1=NULL,**p2=NULL;
 char ch;
 ch=' ';
 mode=0;
@@ -203,10 +203,8 @@ map_g = new mapping*[2];
 map_g[0]=new mapping[n1];
 
 g1 = new float*[n1];
-b1 = new float*[n1];
 for(i=0;i<n1;i++){
 g1[i]=new float[n1];
-b1[i]=new float[n1];
 map_g[0][i].map_ver=i;
 }
 
@@ -214,7 +212,6 @@ fseek(read1,0,SEEK_SET);
 for(i=0;i<n1;i++)
 for(j=0;j<n1;j++){
 fscanf(read1,"%f",&g1[i][j]);
-b1[i][j]=g1[i][j];
 }
 
 fclose(read1);
@@ -239,11 +236,9 @@ ch = fgetc(read2);
 map_g[1]=new mapping[n2];
 
 g2 = new float*[n2];
-b2 = new float*[n2];
 
 for(i=0;i<n2;i++){
 g2[i]=new float[n2];
-b2[i]=new float[n2];
 map_g[1][i].map_ver = i;
 }
 
@@ -251,23 +246,22 @@ fseek(read2,0,SEEK_SET);
 for(i=0;i<n2;i++)
 for(j=0;j<n2;j++){
 fscanf(read2,"%f",&g2[i][j]);
-b2[i][j]=g2[i][j];
 }
 
 fclose(read2);
 //computing probability distribution matrices of both graphs
-prob_dibn(b1,n1);
-prob_dibn(b2,n2);
+prob_dibn(g1,n1); //g1 is converted to the probability distribution matrix of graph 1
+prob_dibn(g2,n2); //g2 is converted to the probability distribution matrix of graph 2
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
  iso=0;
  for(pi=0;(pi<n1)&&(iso!=2);pi++)
  {
-  p1=prob_prop_matrix(p1,b1,n1,pi);
+  p1=prob_prop_matrix(p1,g1,n1,pi);
   for(pj=0;(pj<n2)&&(iso!=2);pj++)
   {
-   p2=prob_prop_matrix(p2,b2,n2,pj);
+   p2=prob_prop_matrix(p2,g2,n2,pj);
    iso = isotest(p1,p2,g1,g2);
    //deleting the memory for the probability propogation matrix
    for(i = 0; i < (2*n2)-1; i++) {
@@ -303,14 +297,6 @@ for(i = 0; i < n2; i++) {
     delete [] g2[i];
 }
 delete [] g2;
-for(i = 0; i < n1; i++) {
-    delete [] b1[i];
-}
-delete [] b1;
-for(i = 0; i < n2; i++) {
-    delete [] b2[i];
-}
-delete [] b2;
 for(i=0;i<=1;i++)  {
     delete [] map_g[i];
 }
