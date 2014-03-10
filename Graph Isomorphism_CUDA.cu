@@ -12,7 +12,6 @@
 using namespace std;
 
 int n1=0,n2=0;
-float *g1,*g2;
 
 struct mapping
 {
@@ -100,7 +99,6 @@ else
  return 0;
 }
 
-float *row_mat,*row_mat_copy;
 //returns the initial state distribution vector
 void istate_dibn_vec(float* init_state, int i,int n)
 {
@@ -112,46 +110,57 @@ for(int j=0;j<n;j++)
 }
 
 //computes the product of matrices m1 & m2 and write the result in res matrix
-template <typename T>
-void matrix_prod(T *res,T *m1,int c1,T *m2,int r2,int c2)
+__global__ void matrix_prod(float *res,float *m1,int c1,float *m2,int r2,int c2)
 {
 float y,t,c;
-if(c1==r2){
- for(int j=0;j<c2;j++){
+int j=blockIdx.x*blockDim.x+threadIdx.x;
+if(c1==r2 && j<c2){
  res[j]=0;
  c=0.0;
   for(int k=0;k<c1;k++){
 //kahan summation to avoid precision lose
-  y=(m1[k]*m2[k*n1+j])-c;
+  y=(m1[k]*m2[k*c2+j])-c;
   t=res[j]+y;
   c = (t-res[j])-y;
   res[j]=t;}
- }
 }}
 
 //calculates the probability propogation matrix for the initial state initstate
 float* prob_prop_matrix(float *p, float *g, int n, int initstate)
 {
+float *row_mat,*gpu_rowmat,*row_mat_copy,*gpu_g;
 //dynamically allocating array for probability distribution matrix
 p = new float[n*((2*n)-1)];
 //row_mat holds the value of each state distribution vector
 row_mat = new float[n];
-row_mat_copy = new float[n];
 //writes the initial state vector to the row_mat
 istate_dibn_vec(row_mat,initstate,n);
+int size_g = n*n*sizeof(float);
+int size = n*sizeof(float);
+dim3 blocksize(2,1);
+dim3 gridsize((n/blocksize.x)+((n/blocksize.x)%n),1);
+cudaMalloc((void**)&gpu_g,size_g);
+cudaMemcpy(gpu_g,g,size_g,cudaMemcpyHostToDevice);
+cudaMalloc((void**)&gpu_rowmat,size);
+cudaMalloc((void**)&row_mat_copy,size);
 
 for(int i=0;i<((2*n)-1);i++)
 {
 //copying state distribution vector to probability propogation matrix
-for(int j=0;j<n;j++){
-p[i*n +j]=row_mat[j];
-row_mat_copy[j]=row_mat[j];}
+ for(int j=0;j<n;j++)
+  p[i*n +j]=row_mat[j];
+
+ cudaMemcpy(row_mat_copy,row_mat,size,cudaMemcpyHostToDevice);
 //calculating the state distribution vector for string of next length
-matrix_prod(row_mat,row_mat_copy,n,g,n,n);
+ matrix_prod<<<gridsize,blocksize>>>(gpu_rowmat,row_mat_copy,n1,gpu_g,n1,n1); //n1==n2
+ cudaMemcpy(row_mat,gpu_rowmat,size,cudaMemcpyDeviceToHost);
 }
 
+//deleting the allocated memory
+cudaFree(gpu_g);
+cudaFree(gpu_rowmat);
+cudaFree(row_mat_copy);
 delete [] row_mat;
-delete [] row_mat_copy;
 return p;
 }
 
@@ -178,10 +187,11 @@ for(int i=0;i<n;i++)
 int main()
 {
 int i,j,mode,pi,pj,iso=0;
-float *p1=NULL,*p2=NULL;
+float *p1=NULL,*p2=NULL,*g1,*g2,*gpu_g1,*gpu_g2;
 char ch;
 ch=' ';
 mode=0;
+
 FILE *read1 = fopen("g1.txt","r");
 //reading the adjacent matrix of Graph 1
 //first checking the no: of elements in a row
@@ -245,10 +255,19 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 {
  dim3 dimBlock(1,1);
  dim3 dimGrid(1,n1);
+ int size = n1*n1*sizeof(float);
 //computing probability distribution matrices of both graphs
- prob_dibn<<<dimGrid,dimBlock>>>(g1,n1); //g1 is converted to the probability distribution matrix of graph 1
-
- prob_dibn<<<dimGrid,dimBlock>>>(g2,n2); //g2 is converted to the probability distribution matrix of graph 2
+ cudaMalloc((void**)&gpu_g1,size);
+ cudaMemcpy(gpu_g1,g1,size,cudaMemcpyHostToDevice);
+ prob_dibn<<<dimGrid,dimBlock>>>(gpu_g1,n1); //g1 is converted to the probability distribution matrix of graph 1
+ cudaMemcpy(g1,gpu_g1,size,cudaMemcpyDeviceToHost);
+ cudaFree(gpu_g1);
+ 
+ cudaMalloc((void**)&gpu_g2,size);
+ cudaMemcpy(gpu_g2,g2,size,cudaMemcpyHostToDevice);
+ prob_dibn<<<dimGrid,dimBlock>>>(gpu_g2,n2); //g2 is converted to the probability distribution matrix of graph 2
+ cudaMemcpy(g2,gpu_g2,size,cudaMemcpyDeviceToHost);
+ cudaFree(gpu_g2);
 
 
  iso=0;
