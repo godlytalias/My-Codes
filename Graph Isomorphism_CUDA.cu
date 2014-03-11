@@ -97,26 +97,35 @@ int sizem = 2*n1*sizeof(mapping);
 mapping *map;
 int size = (2*n1-1)*n1*sizeof(float);
 int sizea = n1*n1*sizeof(float);
+
+//allocating memory for gpu variables
 cudaMalloc((void**)&gpu_p1,size);
 cudaMalloc((void**)&gpu_p2,size);
 cudaMalloc((void**)&map,sizem);
 cudaMalloc((void**)&gpu_equal,sizeb);
+//copying to gpu variables
 cudaMemcpy(gpu_p1,p1,size,cudaMemcpyHostToDevice);
 cudaMemcpy(gpu_p2,p2,size,cudaMemcpyHostToDevice);
 cudaMemcpy(gpu_equal,&equal,sizeb,cudaMemcpyHostToDevice);
 cudaMemcpy(map,map_g,sizem,cudaMemcpyHostToDevice);
+
 eq_matrix<<<dim3(n1/2 , (2*n1-1)/2), dim3(2,2)>>>(gpu_p1,gpu_p2,map,gpu_equal,n1);
+
 cudaMemcpy(&equal,gpu_equal,sizeb,cudaMemcpyDeviceToHost);
 cudaFree(gpu_p1); cudaFree(gpu_p2);
 if(equal)
  {
 	 equal=true;
+	 //allocating memory for gpu variables
 	 cudaMalloc((void**)&gpu_a1,sizea);
 	 cudaMalloc((void**)&gpu_a2,sizea);
+	 //copying to gpu variables
 	 cudaMemcpy(gpu_a1,a1,sizea,cudaMemcpyHostToDevice);
 	 cudaMemcpy(gpu_a2,a2,sizea,cudaMemcpyHostToDevice);
 	 cudaMemcpy(gpu_equal,&equal,sizeb,cudaMemcpyHostToDevice);
+
 	 adj_mat_map<<<dim3(n1/2,n1/2),dim3(2,2)>>>(gpu_a1,gpu_a2,map,gpu_equal,n1);
+
 	 cudaMemcpy(&equal,gpu_equal,sizeb,cudaMemcpyDeviceToHost);
 	 cudaFree(gpu_a1); cudaFree(gpu_a2); cudaFree(gpu_equal); cudaFree(map);
   if(equal)
