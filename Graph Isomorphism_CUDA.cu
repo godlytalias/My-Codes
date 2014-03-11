@@ -9,6 +9,7 @@
 #include<conio.h>
 #include<fstream>
 #include<cuda.h>
+#include<cuda_runtime.h>
 using namespace std;
 
 int n1=0,n2=0;
@@ -19,19 +20,6 @@ int map_ver;
 };
 
 mapping *map_g;
-
-//check whether the two matrices m1 & m2 are equal
-bool eq_matrix(float *m1,float *m2)
-{
-//n1==n2
-for(int i=0;i<((2*n1)-1);i++)
- for(int j=0;j<n1;j++)
-  {
-   if(m1[i*n1+map_g[j].map_ver]!=m2[i*n1+map_g[n1+j].map_ver]){
-    return false;}
-  } 
-return true;
-}
 
 //merge the partitions made by the mergesort
 void merge(float *a,int s1,int e1,int s2,int e2,int mat)
@@ -74,23 +62,64 @@ else
  merge(a,start,start,end,end,mat);
 }
 
-bool adj_mat_map(float *a1, float *a2)
+//check whether the two matrices m1 & m2 are equal
+__global__ void eq_matrix(float *m1,float *m2,mapping *gpu_map, bool *equal,int n)
 {
 //n1==n2
-for(int i=0;i<n1;i++)
- for(int j=0;j<n1;j++)
-  if(a1[(map_g[i].map_ver*n1)+map_g[j].map_ver]!=a2[(map_g[n1+i].map_ver*n1)+map_g[n1+j].map_ver])
-   return false;
-return true;
+    int i=blockIdx.x*blockDim.x+threadIdx.x;
+	int j=blockIdx.y*blockDim.y+threadIdx.y;
+	
+if(i<(2*n-1) && j<n) {
+   if(m1[i*n+gpu_map[j].map_ver]!=m2[i*n+gpu_map[n+j].map_ver])
+	   *equal=false;}
+}
+
+
+__global__ void adj_mat_map(float *a1, float *a2,mapping *gpu_map,bool *equal,int n)
+{
+//n1==n2
+	int i=blockIdx.x*blockDim.x+threadIdx.x;
+	int j=blockIdx.y*blockDim.y+threadIdx.y;
+if(i<n && j<n) {	
+  if(a1[(gpu_map[i].map_ver*n)+gpu_map[j].map_ver]!=a2[(gpu_map[n+i].map_ver*n)+gpu_map[n+j].map_ver])
+	  *equal=false;}
 }
 
 int isotest(float *p1,float *p2,float *a1,float *a2)
 {
 mergesort(p1,0,n1-1,0);
 mergesort(p2,0,n2-1,1);
-if(eq_matrix(p1,p2))
+float *gpu_p1,*gpu_p2,*gpu_a1,*gpu_a2;
+bool *gpu_equal,equal;
+equal = true;
+int sizeb = sizeof(bool);
+int sizem = 2*n1*sizeof(mapping);
+mapping *map;
+int size = (2*n1-1)*n1*sizeof(float);
+int sizea = n1*n1*sizeof(float);
+cudaMalloc((void**)&gpu_p1,size);
+cudaMalloc((void**)&gpu_p2,size);
+cudaMalloc((void**)&map,sizem);
+cudaMalloc((void**)&gpu_equal,sizeb);
+cudaMemcpy(gpu_p1,p1,size,cudaMemcpyHostToDevice);
+cudaMemcpy(gpu_p2,p2,size,cudaMemcpyHostToDevice);
+cudaMemcpy(gpu_equal,&equal,sizeb,cudaMemcpyHostToDevice);
+cudaMemcpy(map,map_g,sizem,cudaMemcpyHostToDevice);
+eq_matrix<<<dim3(n1/2 , (2*n1-1)/2), dim3(2,2)>>>(gpu_p1,gpu_p2,map,gpu_equal,n1);
+cudaMemcpy(&equal,gpu_equal,sizeb,cudaMemcpyDeviceToHost);
+cudaFree(gpu_p1); cudaFree(gpu_p2);
+if(equal)
  {
-  if(adj_mat_map(a1,a2))
+	 equal=true;
+	 cudaMalloc((void**)&gpu_a1,sizea);
+	 cudaMalloc((void**)&gpu_a2,sizea);
+	 cudaMemcpy(gpu_a1,a1,sizea,cudaMemcpyHostToDevice);
+	 cudaMemcpy(gpu_a2,a2,sizea,cudaMemcpyHostToDevice);
+	 cudaMemcpy(gpu_equal,&equal,sizeb,cudaMemcpyHostToDevice);
+	 adj_mat_map<<<dim3(n1/2,n1/2),dim3(2,2)>>>(gpu_a1,gpu_a2,map,gpu_equal,n1);
+	 cudaMemcpy(&equal,gpu_equal,sizeb,cudaMemcpyDeviceToHost);
+	 cudaFree(gpu_a1); cudaFree(gpu_a2); cudaFree(gpu_equal); cudaFree(map);
+  if(equal)
    return 2;
   else
    return 1;
