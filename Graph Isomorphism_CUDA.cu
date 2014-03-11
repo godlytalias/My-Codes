@@ -86,7 +86,7 @@ if(i<n && j<n) {
 	  *equal=false;}
 }
 
-int isotest(float *p1,float *p2,float *a1,float *a2)
+int isotest(float *p1,float *p2)
 {
 mergesort(p1,0,n1-1,0);
 mergesort(p2,0,n2-1,1);
@@ -287,14 +287,14 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
  cudaMalloc((void**)&gpu_g1,gsize);
  cudaMemcpy(gpu_g1,g1,gsize,cudaMemcpyHostToDevice);
  prob_dibn<<<dimGrid,dimBlock>>>(gpu_g1,n1); //g1 is converted to the probability distribution matrix of graph 1
- cudaMemcpy(g1,gpu_g1,gsize,cudaMemcpyDeviceToHost);
  
  
  cudaMalloc((void**)&gpu_g2,gsize);
  cudaMemcpy(gpu_g2,g2,gsize,cudaMemcpyHostToDevice);
  prob_dibn<<<dimGrid,dimBlock>>>(gpu_g2,n2); //g2 is converted to the probability distribution matrix of graph 2
- cudaMemcpy(g2,gpu_g2,gsize,cudaMemcpyDeviceToHost);
-
+ 
+    delete [] g1;
+	delete [] g2;
 
  iso=0;
   psize = (2*n1-1)*n1*sizeof(float);
@@ -307,7 +307,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
   for(pj=0;(pj<n2)&&(iso!=2);pj++)
   {
    p2=prob_prop_matrix(p2,gpu_g2,n2,pj);
-   iso = isotest(p1,p2,g1,g2);
+   iso = isotest(p1,p2);
    //deleting the memory for the probability propogation matrix
        delete [] p2;
   }
@@ -328,8 +328,6 @@ cout<<map_g[i].map_ver<<"->"<<map_g[n1+i].map_ver<<"\n";
 else
 cout<<"NOT ISOMORPHIC\n";
 //deleting memory allocated for arrays
-    delete [] g1;
-	delete [] g2;
 	delete [] map_g;
 	cudaFree(gpu_g1);
     cudaFree(gpu_g2);
