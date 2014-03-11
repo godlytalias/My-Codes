@@ -20,6 +20,7 @@ int map_ver;
 };
 
 mapping *map_g;
+float *gpu_g1,*gpu_g2,*gpu_p1;
 
 //merge the partitions made by the mergesort
 void merge(float *a,int s1,int e1,int s2,int e2,int mat)
@@ -68,7 +69,7 @@ __global__ void eq_matrix(float *m1,float *m2,mapping *gpu_map, bool *equal,int 
 //n1==n2
     int i=blockIdx.x*blockDim.x+threadIdx.x;
 	int j=blockIdx.y*blockDim.y+threadIdx.y;
-	
+
 if(i<(2*n-1) && j<n) {
    if(m1[i*n+gpu_map[j].map_ver]!=m2[i*n+gpu_map[n+j].map_ver])
 	   *equal=false;}
@@ -89,22 +90,19 @@ int isotest(float *p1,float *p2,float *a1,float *a2)
 {
 mergesort(p1,0,n1-1,0);
 mergesort(p2,0,n2-1,1);
-float *gpu_p1,*gpu_p2,*gpu_a1,*gpu_a2;
+float *gpu_p2;
 bool *gpu_equal,equal;
 equal = true;
 int sizeb = sizeof(bool);
 int sizem = 2*n1*sizeof(mapping);
 mapping *map;
 int size = (2*n1-1)*n1*sizeof(float);
-int sizea = n1*n1*sizeof(float);
 
 //allocating memory for gpu variables
-cudaMalloc((void**)&gpu_p1,size);
 cudaMalloc((void**)&gpu_p2,size);
 cudaMalloc((void**)&map,sizem);
 cudaMalloc((void**)&gpu_equal,sizeb);
 //copying to gpu variables
-cudaMemcpy(gpu_p1,p1,size,cudaMemcpyHostToDevice);
 cudaMemcpy(gpu_p2,p2,size,cudaMemcpyHostToDevice);
 cudaMemcpy(gpu_equal,&equal,sizeb,cudaMemcpyHostToDevice);
 cudaMemcpy(map,map_g,sizem,cudaMemcpyHostToDevice);
@@ -112,22 +110,17 @@ cudaMemcpy(map,map_g,sizem,cudaMemcpyHostToDevice);
 eq_matrix<<<dim3(n1/2 , (2*n1-1)/2), dim3(2,2)>>>(gpu_p1,gpu_p2,map,gpu_equal,n1);
 
 cudaMemcpy(&equal,gpu_equal,sizeb,cudaMemcpyDeviceToHost);
-cudaFree(gpu_p1); cudaFree(gpu_p2);
+cudaFree(gpu_p2);
 if(equal)
  {
 	 equal=true;
-	 //allocating memory for gpu variables
-	 cudaMalloc((void**)&gpu_a1,sizea);
-	 cudaMalloc((void**)&gpu_a2,sizea);
 	 //copying to gpu variables
-	 cudaMemcpy(gpu_a1,a1,sizea,cudaMemcpyHostToDevice);
-	 cudaMemcpy(gpu_a2,a2,sizea,cudaMemcpyHostToDevice);
 	 cudaMemcpy(gpu_equal,&equal,sizeb,cudaMemcpyHostToDevice);
 
-	 adj_mat_map<<<dim3(n1/2,n1/2),dim3(2,2)>>>(gpu_a1,gpu_a2,map,gpu_equal,n1);
+	 adj_mat_map<<<dim3(n1/2,n1/2),dim3(2,2)>>>(gpu_g1,gpu_g2,map,gpu_equal,n1);
 
 	 cudaMemcpy(&equal,gpu_equal,sizeb,cudaMemcpyDeviceToHost);
-	 cudaFree(gpu_a1); cudaFree(gpu_a2); cudaFree(gpu_equal); cudaFree(map);
+	 cudaFree(gpu_equal); cudaFree(map);
   if(equal)
    return 2;
   else
@@ -164,21 +157,18 @@ if(c1==r2 && j<c2){
 }}
 
 //calculates the probability propogation matrix for the initial state initstate
-float* prob_prop_matrix(float *p, float *g, int n, int initstate)
+float* prob_prop_matrix(float *p, float *gpu, int n, int initstate)
 {
-float *row_mat,*gpu_rowmat,*row_mat_copy,*gpu_g;
+float *row_mat,*gpu_rowmat,*row_mat_copy;
 //dynamically allocating array for probability distribution matrix
 p = new float[n*((2*n)-1)];
 //row_mat holds the value of each state distribution vector
 row_mat = new float[n];
 //writes the initial state vector to the row_mat
 istate_dibn_vec(row_mat,initstate,n);
-int size_g = n*n*sizeof(float);
 int size = n*sizeof(float);
 dim3 blocksize(2,1);
 dim3 gridsize((n/blocksize.x)+((n/blocksize.x)%n),1);
-cudaMalloc((void**)&gpu_g,size_g);
-cudaMemcpy(gpu_g,g,size_g,cudaMemcpyHostToDevice);
 cudaMalloc((void**)&gpu_rowmat,size);
 cudaMalloc((void**)&row_mat_copy,size);
 
@@ -190,12 +180,11 @@ for(int i=0;i<((2*n)-1);i++)
 
  cudaMemcpy(row_mat_copy,row_mat,size,cudaMemcpyHostToDevice);
 //calculating the state distribution vector for string of next length
- matrix_prod<<<gridsize,blocksize>>>(gpu_rowmat,row_mat_copy,n1,gpu_g,n1,n1); //n1==n2
+ matrix_prod<<<gridsize,blocksize>>>(gpu_rowmat,row_mat_copy,n1,gpu,n1,n1); //n1==n2
  cudaMemcpy(row_mat,gpu_rowmat,size,cudaMemcpyDeviceToHost);
 }
 
 //deleting the allocated memory
-cudaFree(gpu_g);
 cudaFree(gpu_rowmat);
 cudaFree(row_mat_copy);
 delete [] row_mat;
@@ -224,8 +213,8 @@ for(int i=0;i<n;i++)
 
 int main()
 {
-int i,j,mode,pi,pj,iso=0;
-float *p1=NULL,*p2=NULL,*g1,*g2,*gpu_g1,*gpu_g2;
+int i,j,mode,pi,pj,iso=0,psize,gsize;
+float *p1=NULL,*p2=NULL,*g1,*g2;
 char ch;
 ch=' ';
 mode=0;
@@ -293,34 +282,38 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 {
  dim3 dimBlock(1,1);
  dim3 dimGrid(1,n1);
- int size = n1*n1*sizeof(float);
+ gsize = n1*n1*sizeof(float);
 //computing probability distribution matrices of both graphs
- cudaMalloc((void**)&gpu_g1,size);
- cudaMemcpy(gpu_g1,g1,size,cudaMemcpyHostToDevice);
+ cudaMalloc((void**)&gpu_g1,gsize);
+ cudaMemcpy(gpu_g1,g1,gsize,cudaMemcpyHostToDevice);
  prob_dibn<<<dimGrid,dimBlock>>>(gpu_g1,n1); //g1 is converted to the probability distribution matrix of graph 1
- cudaMemcpy(g1,gpu_g1,size,cudaMemcpyDeviceToHost);
- cudaFree(gpu_g1);
+ cudaMemcpy(g1,gpu_g1,gsize,cudaMemcpyDeviceToHost);
  
- cudaMalloc((void**)&gpu_g2,size);
- cudaMemcpy(gpu_g2,g2,size,cudaMemcpyHostToDevice);
+ 
+ cudaMalloc((void**)&gpu_g2,gsize);
+ cudaMemcpy(gpu_g2,g2,gsize,cudaMemcpyHostToDevice);
  prob_dibn<<<dimGrid,dimBlock>>>(gpu_g2,n2); //g2 is converted to the probability distribution matrix of graph 2
- cudaMemcpy(g2,gpu_g2,size,cudaMemcpyDeviceToHost);
- cudaFree(gpu_g2);
+ cudaMemcpy(g2,gpu_g2,gsize,cudaMemcpyDeviceToHost);
 
 
  iso=0;
+  psize = (2*n1-1)*n1*sizeof(float);
  for(pi=0;(pi<n1)&&(iso!=2);pi++)
  {
-  p1=prob_prop_matrix(p1,g1,n1,pi);
+  p1=prob_prop_matrix(p1,gpu_g1,n1,pi);  
+  cudaMalloc((void**)&gpu_p1,psize);
+  cudaMemcpy(gpu_p1,p1,psize,cudaMemcpyHostToDevice);
+  
   for(pj=0;(pj<n2)&&(iso!=2);pj++)
   {
-   p2=prob_prop_matrix(p2,g2,n2,pj);
+   p2=prob_prop_matrix(p2,gpu_g2,n2,pj);
    iso = isotest(p1,p2,g1,g2);
    //deleting the memory for the probability propogation matrix
        delete [] p2;
   }
   //deleting the memory for probability propogation matrix
   delete [] p1;
+  cudaFree(gpu_p1);
  }
 }
 else
@@ -338,6 +331,8 @@ cout<<"NOT ISOMORPHIC\n";
     delete [] g1;
 	delete [] g2;
 	delete [] map_g;
+	cudaFree(gpu_g1);
+    cudaFree(gpu_g2);
 getch();
 return 0;
 }
