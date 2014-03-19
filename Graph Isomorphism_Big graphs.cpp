@@ -28,13 +28,14 @@ return true;
 struct mapping
 {
 int map_ver;
-int state; //0-fixed 1-neutral 2-not fixed
+float state; 
 };
 
 mapping **map_g;
 float **g1,**g2;
 int node,w_node;
 int tmp_count;
+
 
 //merge the partitions made by the mergesort
 void merge(float *g,int s1,int e1,int s2,int e2,int graph_id)
@@ -51,12 +52,7 @@ float a,b;
    m=0;
    a=g[map_g[graph_id][i].map_ver];
    b=g[map_g[graph_id][j].map_ver];
-     if(a==b)
-           {
-           map_g[graph_id][i].state=2;
-           map_g[graph_id][j].state=2;
-           }
-   
+           
    if(a<b)
    i++;
    else if(a>=b)
@@ -163,29 +159,27 @@ row_mat = new float[n];
 row_mat_copy = new float[n];
 //writes the initial state vector to the row_mat
 istate_dibn_vec(row_mat,initstate,n);
-
 for(int i=0;flag && i<((2*n)-1);i++)
 {
         start=0;
-        end=1;
         j=0;
+        flag=false;
         while(j<n)
         {
-        while(map_g[graph_id][start].state==0){ start++; j++; }
-        while(map_g[graph_id][end].state!=0 && end<n) {end++; j++;}
+        end=start+1;
+        j++;
+        while(map_g[graph_id][end].state==map_g[graph_id][start].state && end<n){ end++; j++; }
+        if(start<end-1){
         mergesort(row_mat,start,end-1,graph_id);
-        start=end+1;
-        end=start;
-        }
+        flag=true;}
         
-flag=false;
+        start=end;
+        }
+       
 //writing state distribution vector to probability propogation matrix
-for(int j=0;j<n;j++){
+for(j=0;j<n;j++){
  row_mat_copy[j]=row_mat[j];
- if(map_g[graph_id][j].state==1)
-  map_g[graph_id][j].state=0;
- if(map_g[graph_id][j].state!=0)
-  flag=true;
+ map_g[graph_id][j].state=row_mat[map_g[graph_id][j].map_ver];
  }
 //calculating the state distribution vector for string of next length
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
@@ -303,9 +297,9 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
  for(pi=0;(pi<n1)&&(iso!=2);pi++)
  {
         for(int i=0;i<n1;i++)
-{
+        {
         map_g[0][i].map_ver=i;
-        map_g[0][i].state=1;
+        map_g[0][i].state=-1.0;
         }
   sprintf(filename,"../graphiso/map_%d_%d",0,pi);  
   read1=fopen(filename,"r");
@@ -318,7 +312,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
    for(int i=0;i<n1;i++)
         {
         map_g[1][i].map_ver=i;
-        map_g[1][i].state=1;
+        map_g[1][i].state=-1.0;
         }
    sprintf(filename,"../graphiso/map_%d_%d",1,pj);
    read2=fopen(filename,"r");
