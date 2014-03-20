@@ -12,24 +12,11 @@ using namespace std;
 
 int n1,n2;
 
-//check whether the two matrices m1 & m2 are equal
-bool eq_matrix(int p1,int p2)
-{/*
-//n1==n2
-for(int i=0;i<((2*n1)-1);i++)
- for(int j=0;j<n1;j++)
-  {
-   if(m1[i][map_g[0][j].map_ver]!=m2[i][map_g[1][j].map_ver]){
-    return false;}
-  } */
-return true;
-}
-
 struct mapping
 {
 int map_ver;
-float state; 
-};
+float state;
+int classid; };
 
 mapping **map_g;
 float **g1,**g2;
@@ -41,7 +28,7 @@ int tmp_count;
 void merge(float *g,int s1,int e1,int s2,int e2,int graph_id)
 {
 FILE *read;
-int i,j,m,temp;
+int i,j,temp;
 float a,b;
  if(s1<e2 && (e1+1)==s2)
  {
@@ -49,10 +36,8 @@ float a,b;
   j=s2;
   while(i<=e1 && j<=e2)
   {
-   m=0;
    a=g[map_g[graph_id][i].map_ver];
    b=g[map_g[graph_id][j].map_ver];
-           
    if(a<b)
    i++;
    else if(a>=b)
@@ -151,7 +136,8 @@ void prob_prop_matrix(int graph_id, float **g, int n, int initstate)
 {
 char file_name[40];
 bool flag=true;
-int start,end,j;
+int start,end,j,temp,classptr;
+float temps;
 sprintf(file_name,"../graphiso/map_%d_%d",graph_id,initstate);
 FILE *write = fopen(file_name,"w");
 //row_mat holds the value of each state distribution vector
@@ -159,8 +145,28 @@ row_mat = new float[n];
 row_mat_copy = new float[n];
 //writes the initial state vector to the row_mat
 istate_dibn_vec(row_mat,initstate,n);
+classptr=1;
 for(int i=0;flag && i<((2*n)-1);i++)
 {
+        j=1;
+        //this loop gives different class id to vertices with same class id but different state
+        while(j<n && map_g[graph_id][j].classid==map_g[graph_id][j-1].classid)
+        {
+        if(map_g[graph_id][j].state!=map_g[graph_id][j-1].state)
+          {
+            temp=map_g[graph_id][j].classid;
+          while(j<n && map_g[graph_id][j].classid==temp){
+            temps=map_g[graph_id][j].state;
+             while(j<n && map_g[graph_id][j].state==temps && map_g[graph_id][j].classid==temp){
+              map_g[graph_id][j].classid=classptr;
+              j++;
+              }
+              classptr++;
+              }  
+             }  
+         else j++;  
+                  }
+                  
         start=0;
         j=0;
         flag=false;
@@ -168,11 +174,14 @@ for(int i=0;flag && i<((2*n)-1);i++)
         {
         end=start+1;
         j++;
-        while(map_g[graph_id][end].state==map_g[graph_id][start].state && end<n){ end++; j++; }
+        while(j<n && map_g[graph_id][end].classid==map_g[graph_id][start].classid)
+        {
+          j++; end++;               
+         }
         if(start<end-1){
         mergesort(row_mat,start,end-1,graph_id);
         flag=true;}
-        
+                
         start=end;
         }
        
@@ -287,7 +296,6 @@ for(int i=0;i<2;i++)
 map_g[i]=new mapping[n1];
 
 
-
 FILE *read1,*read2;
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
@@ -300,6 +308,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
         {
         map_g[0][i].map_ver=i;
         map_g[0][i].state=-1.0;
+        map_g[0][i].classid=0;
         }
   sprintf(filename,"../graphiso/map_%d_%d",0,pi);  
   read1=fopen(filename,"r");
@@ -313,6 +322,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
         {
         map_g[1][i].map_ver=i;
         map_g[1][i].state=-1.0;
+        map_g[1][i].classid=0;
         }
    sprintf(filename,"../graphiso/map_%d_%d",1,pj);
    read2=fopen(filename,"r");
