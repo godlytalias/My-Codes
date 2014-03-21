@@ -157,7 +157,7 @@ void permute(int start,int end,FILE *file,int graph_id)
  for(int i=0;i<=(end-start);i++)
   {
    swap(&map_g[graph_id][start],&map_g[graph_id][start+i]);
-   if(start==0 || (start>0 && map_g[graph_id][start].classid!=map_g[graph_id][start-1].classid))
+   if(start>0 && map_g[graph_id][start].classid!=map_g[graph_id][start-1].classid && end<(node-1))
    {
    for(int j=end+1;j<(node-1);j++)
     if(map_g[graph_id][j].classid==map_g[graph_id][j+1].classid)
@@ -165,7 +165,8 @@ void permute(int start,int end,FILE *file,int graph_id)
    for(int j=t_start+1;j<node-1;j++)
     if(map_g[graph_id][j].classid!=map_g[graph_id][j+1].classid)
      { t_end = j; break; }
-   permute(t_start,t_end,file,graph_id);}
+   if(t_start!=t_end)
+     permute(t_start,t_end,file,graph_id);}
    permute(start+1,end,file,graph_id);
    swap(&map_g[graph_id][start+i],&map_g[graph_id][start]);
    }
