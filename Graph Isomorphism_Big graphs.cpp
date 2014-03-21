@@ -81,25 +81,26 @@ int isotest(int p1_init_node,int p2_init_node,float **a1,float **a2)
 {
     char filename[40];
     sprintf(filename,"../graphiso/map_0_%d",p1_init_node);
-FILE *read = fopen(filename,"r");
+    FILE *read1 = fopen(filename,"r");
+    sprintf(filename,"../graphiso/map_1_%d",p2_init_node);
+    FILE *read2 = fopen(filename,"r");
+while(!feof(read1)){
 for(int i=0;i<node;i++)
- fscanf(read,"%d",&map_g[0][i].map_ver);
-fclose(read);
+ fscanf(read1,"%d",&map_g[0][i].map_ver);
 
-sprintf(filename,"../graphiso/map_1_%d",p2_init_node);
-read = fopen(filename,"r");
-for(int i=0;i<node;i++)
- fscanf(read,"%d",&map_g[1][i].map_ver);
-fclose(read);
+while(!feof(read2)){
+for(int j=0;j<node;j++)
+ fscanf(read2,"%d",&map_g[1][j].map_ver);
 
-//if(eq_matrix(p1_init_node,p2_init_node))
-// {
   if(adj_mat_map(a1,a2))
-   return 2;
-//  else
-//   return 1;
-// }
-else
+ { fclose(read1);
+   fclose(read2);
+   return 2; } }
+      
+ fseek(read2,0,SEEK_SET);
+    }
+fclose(read1);
+fclose(read2);
  return 0;
 }
 
@@ -130,6 +131,46 @@ if(c1==r2){
   res[j]=t;}
  }
 }}
+
+//swaps the given parameters
+void swap(mapping *a,mapping *b)
+{
+ mapping temp;
+ temp=*a;
+ *a=*b;
+ *b=temp;     
+}
+
+//output all the possible mappings when 2 column vectors of 
+//probability propogation matrix becomes equal
+void permute(int start,int end,FILE *file,int graph_id)
+{
+ int t_start,t_end;
+ if(start==end)
+ {
+ for(int i=0;i<node;i++)
+  fprintf(file,"%d ",map_g[graph_id][i].map_ver);
+ fprintf(file,"\n");
+ }
+ else
+ {
+ for(int i=0;i<=(end-start);i++)
+  {
+   swap(&map_g[graph_id][start],&map_g[graph_id][start+i]);
+   if(start==0 || (start>0 && map_g[graph_id][start].classid!=map_g[graph_id][start-1].classid))
+   {
+   for(int j=end+1;j<(node-1);j++)
+    if(map_g[graph_id][j].classid==map_g[graph_id][j+1].classid)
+     { t_start=j; break; }
+   for(int j=t_start+1;j<node-1;j++)
+    if(map_g[graph_id][j].classid!=map_g[graph_id][j+1].classid)
+     { t_end = j; break; }
+   permute(t_start,t_end,file,graph_id);}
+   permute(start+1,end,file,graph_id);
+   swap(&map_g[graph_id][start+i],&map_g[graph_id][start]);
+   }
+ }
+}
 
 //calculates the probability propogation matrix for the initial state initstate
 void prob_prop_matrix(int graph_id, float **g, int n, int initstate)
@@ -196,8 +237,17 @@ matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 
 delete [] row_mat;
 delete [] row_mat_copy;
-for(int i=0;i<n;i++)
-fprintf(write,"%d ",map_g[graph_id][i].map_ver);
+start=0;
+while(start<n-1){
+ if(map_g[graph_id][start].classid==map_g[graph_id][start+1].classid)
+  break;
+ start++; }
+end=start+1;
+while(end<n-1){
+ if(map_g[graph_id][end].classid!=map_g[graph_id][end+1].classid)
+  break;
+ end++; }
+permute(start,end,write,graph_id);
 fclose(write);
 }
 
