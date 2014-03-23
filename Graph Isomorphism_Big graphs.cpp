@@ -10,7 +10,7 @@
 #include<fstream>
 using namespace std;
 
-int n1,n2,s,e;
+int n1,n2;
 
 struct mapping
 {
@@ -157,14 +157,14 @@ void permute(int start,int end,FILE *file,int graph_id,bool flag)
  for(int i=0;i<=(end-start);i++)
   {
    swap(&map_g[graph_id][start],&map_g[graph_id][start+i]);
-   if(start==s || (i>0 && end<=e))
+   if((start==0 || start>0 && map_g[graph_id][start].classid!=map_g[graph_id][start-1].classid || i!=0)&& end<(node-1))
    {
    for(int j=end+1;j<(node-1);j++)
     if(map_g[graph_id][j].classid==map_g[graph_id][j+1].classid)
      { t_start=j; break; }
    if(t_start>0)
    for(int j=t_start+1;j<node-1;j++)
-    if(map_g[graph_id][j].classid!=map_g[graph_id][j+1].classid)
+    if(map_g[graph_id][j].classid!=map_g[graph_id][j+1].classid) //no need to check for last element in the row as it will always be different
      { t_end = j; break; }
    if(t_start!=t_end){
      permute(t_start,t_end,file,graph_id,true);
@@ -181,7 +181,7 @@ void prob_prop_matrix(int graph_id, float **g, int n, int initstate)
 {
 char file_name[40];
 bool flag=true;
-int j,temp,classptr;
+int start,end,j,temp,classptr;
 float temps;
 sprintf(file_name,"../graphiso/map_%d_%d",graph_id,initstate);
 FILE *write = fopen(file_name,"w");
@@ -212,21 +212,22 @@ for(int i=0;flag && i<((2*n)-1);i++)
          else j++;  
                   }
                   
-        s=0;
+        start=0;
         j=0;
         flag=false;
         while(j<n)
         {
-        e=s+1;
+        end=start+1;
         j++;
-        while(j<n && map_g[graph_id][e].classid==map_g[graph_id][s].classid)
+        while(j<n && map_g[graph_id][end].classid==map_g[graph_id][start].classid)
         {
-          j++; e++;               
+          j++; end++;               
          }
-        if(s<e-1){
-        mergesort(row_mat,s,e-1,graph_id);
+        if(start<end-1){
+        mergesort(row_mat,start,end-1,graph_id);
         flag=true;}
-        s=e;
+                
+        start=end;
         }
        
 //writing state distribution vector to probability propogation matrix
@@ -239,23 +240,19 @@ for(j=0;j<n;j++){
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
 
-for(int i=0;i<node;i++)
-printf("%d ",map_g[graph_id][i].classid);
-printf("\n");
-
 delete [] row_mat;
 delete [] row_mat_copy;
-s=0;
-while(s<n-1){
- if(map_g[graph_id][s].classid==map_g[graph_id][s+1].classid)
+start=0;
+while(start<n-1){
+ if(map_g[graph_id][start].classid==map_g[graph_id][start+1].classid)
   break;
- s++; }
-e=s+1;
-while(e<n-1){
- if(map_g[graph_id][e].classid!=map_g[graph_id][e+1].classid)
+ start++; }
+end=start+1;
+while(end<n-1){
+ if(map_g[graph_id][end].classid!=map_g[graph_id][end+1].classid)
   break;
- e++; }
-permute(s,e,write,graph_id,true);
+ end++; }
+permute(start,end,write,graph_id,true);
 fclose(write);
 }
 
