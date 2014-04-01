@@ -69,8 +69,9 @@ else
 
 bool adj_mat_map(float **a1, float **a2)
 {
-for(int i=0;i<node;i++)
- for(int j=0;j<node;j++)
+int i,j;
+for(i=0;i<node;i++)
+ for(j=0;j<node;j++)
   if(a1[map_g[0][i].map_ver][map_g[0][j].map_ver]!=a2[map_g[1][i].map_ver][map_g[1][j].map_ver])
    return false;
 return true;
@@ -252,7 +253,8 @@ while(end<n-1){
  if(map_g[graph_id][end].classid!=map_g[graph_id][end+1].classid)
   break;
  end++; }
-permute(start,end,write,graph_id,true);
+if(start<end && end<n)
+ permute(start,end,write,graph_id,true);
 fclose(write);
 }
 
