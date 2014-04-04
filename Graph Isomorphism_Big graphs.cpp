@@ -10,8 +10,9 @@
 #include<fstream>
 using namespace std;
 
-int n1,n2;
+const int MAX_PERMUTATIONS=1000;
 
+int n1,n2,perm;
 struct mapping
 {
 int map_ver;
@@ -146,9 +147,11 @@ void swap(mapping *a,mapping *b)
 //probability propogation matrix becomes equal
 void permute(int start,int end,FILE *file,int graph_id,bool flag)
 {
+// if(perm<MAX_PERMUTATIONS){
  int t_start=0,t_end=0;
  if(start==end && flag)
  {
+ perm++;
  for(int i=0;i<node;i++)
   fprintf(file,"%d ",map_g[graph_id][i].map_ver);
  fprintf(file,"\n");
@@ -175,7 +178,7 @@ void permute(int start,int end,FILE *file,int graph_id,bool flag)
    swap(&map_g[graph_id][start+i],&map_g[graph_id][start]);
    }
  }
-}
+}//}
 
 //calculates the probability propogation matrix for the initial state initstate
 void prob_prop_matrix(int graph_id, float **g, int n, int initstate)
@@ -196,9 +199,11 @@ for(int i=0;flag && i<((2*n)-1);i++)
 {
         j=1;
         //this loop gives different class id to vertices with same class id but different state
-        while(j<n && map_g[graph_id][j].classid==map_g[graph_id][j-1].classid)
+        while(j<n)
         {
-        if(map_g[graph_id][j].state!=map_g[graph_id][j-1].state)
+        if(map_g[graph_id][j].classid==map_g[graph_id][j-1].classid)
+        {
+         if(map_g[graph_id][j].state!=map_g[graph_id][j-1].state)
           {
             temp=map_g[graph_id][j].classid;
           while(j<n && map_g[graph_id][j].classid==temp){
@@ -210,7 +215,9 @@ for(int i=0;flag && i<((2*n)-1);i++)
               classptr++;
               }  
              }  
-         else j++;  
+          else j++;
+             }
+         else j++;
                   }
                   
         start=0;
@@ -253,8 +260,15 @@ while(end<n-1){
  if(map_g[graph_id][end].classid!=map_g[graph_id][end+1].classid)
   break;
  end++; }
+ perm=0;
 if(start<end && end<n)
  permute(start,end,write,graph_id,true);
+else
+{
+for(int i=0;i<node;i++)
+  fprintf(write,"%d ",map_g[graph_id][i].map_ver);
+ fprintf(write,"\n");   
+}
 fclose(write);
 }
 
