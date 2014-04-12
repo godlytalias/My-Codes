@@ -25,50 +25,70 @@ float *g1,*g2;
 int node,w_node;
 int tmp_count;
 
-
-//merge the partitions made by the mergesort
-void merge(float *g,int s1,int e1,int s2,int e2,int graph_id)
+void max_heapify(float *a,mapping *pos, int i, int n)
 {
- int base_ptr = graph_id*node;
-FILE *read;
-int i,j,temp;
-float a,b;
- if(s1<e2 && (e1+1)==s2)
- {
-  i=s1;
-  j=s2;
-  while(i<=e1 && j<=e2)
-  {
-   a=g[map_g[base_ptr+i].map_ver];
-   b=g[map_g[base_ptr+j].map_ver];
-   if(a<b)
-   i++;
-   else if(a>=b)
+    int j, temps;
+    float temp;
+    temp = a[i];
+    temps = pos[i].map_ver;
+    j = 2*i;
+    while (j <= n)
     {
-     temp = map_g[base_ptr+j].map_ver;
-     for(int k=j;k>i;k--)
-     map_g[base_ptr+k].map_ver=map_g[base_ptr+k-1].map_ver;
-     map_g[base_ptr+i].map_ver=temp;
-     j++;
-     i++; e1++;
+        if (j < n && a[j+1] > a[j])
+            j = j+1;
+        if (temp > a[j])
+            break;
+        else if (temp <= a[j])
+        {
+            a[j/2] = a[j];
+            pos[j/2].map_ver = pos[j].map_ver;
+            j = 2*j;
+        }
     }
-  }
- }
+    a[j/2] = temp;
+    pos[j/2].map_ver = temps;
+    return;
+}
+void heapsort(float *a,mapping *pos, int end)
+{
+     cout<<"\nHeap";
+     for(int m=1;m<=end;m++)
+      cout<<a[m]<<" ";
+     cout<<"\n";
+     for(int m=1;m<=end;m++)
+      cout<<pos[m].map_ver<<" ";
+     cout<<"\n\n";
+     getch();
+    int i, temps;
+    float temp;
+    for (i = end; i >= 2; i--)
+    {
+        temp = a[i];
+        temps = pos[i].map_ver;
+        a[i] = a[1];
+        pos[i].map_ver = pos[1].map_ver;
+        a[1] = temp;
+        pos[1].map_ver = temps;
+        max_heapify(a,pos, 1, i - 1);
+    }
+    cout<<"\nHeap done";
+     for(int m=1;m<=end;m++)
+      cout<<a[m]<<" ";
+     cout<<"\n";
+     for(int m=1;m<=end;m++)
+      cout<<pos[m].map_ver<<" ";
+     cout<<"\n\n";
+     getch();
+}
+void build_maxheap(float *a,mapping *pos, int end)
+{
+    int i;
+    for(i = end/2; i >= 1; i--)
+    {
+        max_heapify(a,pos, i, end);
+    }
 }
 
-//mergesort the matrix a and write the mapping to map_g[mat]
-void mergesort(float *g,int start, int end,int graph_id)
-{
-if(start<(end-1))
- {
- mergesort(g,start,(start+end)/2,graph_id);
- mergesort(g,((start+end)/2)+1,end,graph_id);
- merge(g,start,(start+end)/2,((start+end)/2)+1,end,graph_id);
- }
-else
- merge(g,start,start,end,end,graph_id);
- 
-}
 
 bool adj_mat_map(float *a1, float *a2)
 {
@@ -200,6 +220,8 @@ istate_dibn_vec(row_mat,initstate,n);
 classptr=1;
 for(int i=0;flag && i<((2*n)-1);i++)
 {
+for(j=0;j<n;j++)
+ row_mat_copy[j]=row_mat[j];
         j=1;
         //this loop gives different class id to vertices with same class id but different state
         while(j<n)
@@ -235,16 +257,31 @@ for(int i=0;flag && i<((2*n)-1);i++)
           j++; end++;               
          }
         if(start<end-1){
-        mergesort(row_mat,start,end-1,graph_id);
-        flag=true;}                        
+        build_maxheap(&row_mat[start-1],&map_g[ptr-1+start],end-start);
+        heapsort(&row_mat[start-1],&map_g[ptr-1+start],end-start); //subtracting 1 from array subscript for the padding for heap sort
+        flag=true;
+        }                        
         start=end;
         }
        
 //writing state distribution vector to probability propogation matrix
-for(j=0;j<n;j++){
- row_mat_copy[j]=row_mat[j];
- map_g[ptr+j].state=row_mat[map_g[ptr+j].map_ver];
- }
+for(j=0;j<n;j++)
+ map_g[ptr+j].state=row_mat_copy[map_g[ptr+j].map_ver];
+ 
+for(j=0;j<n;j++)
+ cout<<row_mat_copy[j]<<" ";
+cout<<"\n";
+for(j=0;j<n;j++)
+ cout<<map_g[j].classid;
+cout<<"\n";
+for(j=0;j<n;j++)
+ cout<<map_g[j].map_ver;
+ cout<<"\n";
+for(j=0;j<n;j++)
+ cout<<row_mat_copy[map_g[j].map_ver];
+cout<<"\n\n";
+getch();
+
 //calculating the state distribution vector for string of next length
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
