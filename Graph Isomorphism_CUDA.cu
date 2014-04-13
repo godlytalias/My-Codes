@@ -11,7 +11,6 @@
 #include<direct.h>
 using namespace std;
 
-const int MAX_PERMUTATIONS=1000;
 
 int n1,n2,perm;
 struct mapping
@@ -134,52 +133,6 @@ if(c1==r2){
  }
 }}
 
-//swaps the given parameters
-void swap(mapping *a,mapping *b)
-{
- mapping temp;
- temp=*a;
- *a=*b;
- *b=temp;     
-}
-
-//output all the possible mappings when 2 column vectors of 
-//probability propogation matrix becomes equal
-void permute(int start,int end,FILE *file,int graph_id,bool flag)
-{
-// if(perm<MAX_PERMUTATIONS){
- int t_start=0,t_end=0;
- if(start==end && flag)
- {
- perm++;
- for(int i=0;i<node;i++)
-  fprintf(file,"%d ",map_g[graph_id*node+i].map_ver);
- fprintf(file,"\n");
- }
- else
- {
- for(int i=0;i<=(end-start);i++)
-  {
-   swap(&map_g[graph_id*node+start],&map_g[graph_id*node+start+i]);
-   if((start==0 || start>0 && map_g[graph_id*node+start].classid!=map_g[graph_id*node+start-1].classid || i!=0)&& end<(node-1))
-   {
-   for(int j=end+1;j<(node-1);j++)
-    if(map_g[graph_id*node+j].classid==map_g[graph_id*node+j+1].classid)
-     { t_start=j; break; }
-   if(t_start>0)
-   for(int j=t_start+1;j<node-1;j++)
-    if(map_g[graph_id*node+j].classid!=map_g[graph_id*node+j+1].classid) //no need to check for last element in the row as it will always be different
-     { t_end = j; break; }
-   if(t_start!=t_end){
-     permute(t_start,t_end,file,graph_id,true);
-     flag=false;}}
-   permute(start+1,end,file,graph_id,flag);
-   flag=true;
-   swap(&map_g[graph_id*node+start+i],&map_g[graph_id*node+start]);
-   }
- }
-}//}
-
 //calculates the probability propogation matrix for the initial state initstate
 void prob_prop_matrix(int graph_id, float *g, int n, int initstate)
 {
@@ -263,15 +216,10 @@ while(end<n-1){
  if(map_g[ptr+end].classid!=map_g[ptr+end+1].classid)
   break;
  end++; }
- perm=0;
-if(start<end && end<n)
- permute(start,end,write,graph_id,true);
-else
-{
+
 for(int i=0;i<node;i++)
   fprintf(write,"%d ",map_g[ptr+i].map_ver);
  fprintf(write,"\n");   
-}
 fclose(write);
 }
 //returns the degree of a vertix
@@ -423,7 +371,6 @@ fclose(result);
 }
 else
 cout<<"NOT ISOMORPHIC\n";
-
 
 //deleting memory allocated for arrays
 delete [] g1;
