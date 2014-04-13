@@ -8,6 +8,8 @@
 #include<iostream>
 #include<conio.h>
 #include<fstream>
+#include<cuda.h>
+#include<cuda_runtime.h>
 #include<direct.h>
 using namespace std;
 
@@ -19,12 +21,13 @@ int map_ver;
 float state;
 int classid; };
 
-mapping *map_g;
+
 float *g1,*g2;
 int node,w_node;
 int tmp_count;
+mapping *map_g;
 
-void max_heapify(float *a,mapping *pos, int i, int n)
+__device__ void max_heapify(float *a,mapping *pos, int i, int n)
 {
     int j, temps;
     float temp;
@@ -46,10 +49,10 @@ void max_heapify(float *a,mapping *pos, int i, int n)
     pos[j/2].map_ver = temps;
     return;
 }
-void heapsort(float *a,mapping *pos, int end)
+
+__device__ void heapsort(float *a,mapping *pos, int end)
 {
     int i, temps;
-    float temp;
     for (i = end; i >= 2; i--)
     {
         temps = pos[i].map_ver;
@@ -58,7 +61,8 @@ void heapsort(float *a,mapping *pos, int end)
         max_heapify(a,pos, 1, i - 1);
     }
 }
-void build_maxheap(float *a,mapping *pos, int end)
+
+__device__ void build_maxheap(float *a,mapping *pos, int end)
 {
     int i;
     for(i = end/2; i >= 1; i--)
@@ -105,9 +109,9 @@ fclose(read2);
  return 0;
 }
 
-float *row_mat,*row_mat_copy;
+
 //returns the initial state distribution vector
-void istate_dibn_vec(float* init_state, int i,int n)
+__device__ void istate_dibn_vec(float* init_state, int i,int n)
 {
 for(int j=0;j<n;j++)
  if(j==i)
@@ -117,7 +121,7 @@ for(int j=0;j<n;j++)
 }
 
 //computes the product of matrices m1 & m2 and write the result in res matrix
-void matrix_prod(float *res,float *m1,int c1,float *m2,int r2,int c2)
+__device__ void matrix_prod(float *res,float *m1,int c1,float *m2,int r2,int c2)
 {
 float y,t,c;
 if(c1==r2){
@@ -126,7 +130,7 @@ if(c1==r2){
  c=0.0;
   for(int k=0;k<c1;k++){
 //kahan summation to avoid precision lose
-  y=(m1[k]*m2[k*node+j])-c;
+  y=(m1[k]*m2[k*c2+j])-c;
   t=res[j]+y;
   c = (t-res[j])-y;
   res[j]=t;}
@@ -134,18 +138,21 @@ if(c1==r2){
 }}
 
 //calculates the probability propogation matrix for the initial state initstate
-void prob_prop_matrix(int graph_id, float *g, int n, int initstate)
+__global__ void prob_prop_matrix(int graph_id, float *g, int n, mapping *map_g,float *row_mat,float *row_mat_copy)
 {
-char file_name[40];
+	int initstate = blockIdx.x*blockDim.x+threadIdx.x;
+	int ptr = (graph_id+initstate)*n;
+	 for(int i=0;i<n;i++)
+        {
+        map_g[ptr+i].map_ver=i;
+        map_g[ptr+i].state=-1.0;
+        map_g[ptr+i].classid=0;
+        }
+
 bool flag=true;
 int start,end,j,temp,classptr;
-int ptr = graph_id*node;
 float temps;
-sprintf(file_name,"../graphiso/map_%d_%d",graph_id,initstate);
-FILE *write = fopen(file_name,"w");
-//row_mat holds the value of each state distribution vector
-row_mat = new float[n];
-row_mat_copy = new float[n];
+
 //writes the initial state vector to the row_mat
 istate_dibn_vec(row_mat,initstate,n);
 classptr=1;
@@ -204,8 +211,6 @@ for(j=0;j<n;j++)
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
 
-delete [] row_mat;
-delete [] row_mat_copy;
 start=0;
 while(start<n-1){
  if(map_g[ptr+start].classid==map_g[ptr+start+1].classid)
@@ -216,17 +221,12 @@ while(end<n-1){
  if(map_g[ptr+end].classid!=map_g[ptr+end+1].classid)
   break;
  end++; }
-
-for(int i=0;i<node;i++)
-  fprintf(write,"%d ",map_g[ptr+i].map_ver);
- fprintf(write,"\n");   
-fclose(write);
 }
 //returns the degree of a vertix
 int degree(float *m,int row,int n)
 {
 int deg=0;
-int base_ptr=row*node;
+int base_ptr=row*n;
 for(int i=0;i<n;i++){
 deg+=(int)m[base_ptr+i];}
 return deg;
@@ -240,9 +240,20 @@ for(int i=0;i<n;i++){
  deg = degree(m,i,n);
  for(int j=0;j<n;j++)
  {
- m[i*node+j]/=deg;
+ m[i*n+j]/=deg;
  }
 }
+}
+
+void write(int graph_id,int initstate,mapping *map_g)
+{
+	char file_name[40];
+	sprintf(file_name,"../graphiso/map_%d_%d",graph_id,initstate);
+FILE *write = fopen(file_name,"w");
+	for(int i=0;i<node;i++)
+  fprintf(write,"%d ",map_g[i].map_ver);
+ fprintf(write,"\n");   
+fclose(write);
 }
 
 void get_graphs()
@@ -312,50 +323,65 @@ int main()
 
 FILE *result;
 
-int i,j,mode,deg=0,pi,pj,iso;
-char ch,filename[40];
-ch=' ';
+int pi,pj,iso=0;
+char filename[40];
+
 get_graphs();
-
-map_g = new mapping[2*n1];
-
 
 FILE *read1,*read2;
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
+	mapping *map = new mapping[n1*(n1+1)];
+    mapping *m;
+	float *graph1,*graph2,*rm,*rmc;
+	cudaMalloc((float**)&rm,sizeof(float)*n1);
+	cudaMalloc((float**)&rmc,sizeof(float)*n1);
+	cudaMalloc((float**)&graph1,sizeof(float)*n1*n1);
+	cudaMemcpy(graph1,g1,sizeof(float)*n1*n1,cudaMemcpyHostToDevice);
+	cudaMalloc((float**)&graph2,sizeof(float)*n2*n2);
+	cudaMemcpy(graph2,g2,sizeof(float)*n2*n2,cudaMemcpyHostToDevice);
  //dynamically allocating array for probability distribution matrix
+	
+   cudaMalloc((mapping**)&m,sizeof(sizeof(mapping)*n1*(n1+1)));
  for(pi=0;(pi<n1)&&(iso!=2);pi++)
- {
-        for(int i=0;i<n1;i++)
-        {
-        map_g[i].map_ver=i;
-        map_g[i].state=-1.0;
-        map_g[i].classid=0;
-        }
+ {       
   sprintf(filename,"../graphiso/map_%d_%d",0,pi);  
   read1=fopen(filename,"r");
   if(!read1)
-   prob_prop_matrix(0,g1,n1,pi);
+  {
+   prob_prop_matrix<<<1,1>>>(0,g1,n1,m,rm,rmc);
+   cudaMemcpy(map,m,sizeof(mapping)*n1,cudaMemcpyDeviceToHost);
+   write(0,pi,map);
+  }
    else
   fclose(read1);
- // cout<<"\ndone\n";
-  for(pj=0;(pj<n2)&&(iso!=2);pj++)
-  {
-   for(int i=0;i<n1;i++)
-        {
-        map_g[n1+i].map_ver=i;
-        map_g[n1+i].state=-1.0;
-        map_g[n1+i].classid=0;
-        }
-   sprintf(filename,"../graphiso/map_%d_%d",1,pj);
+
+   sprintf(filename,"../graphiso/map_%d_%d",1,0);
    read2=fopen(filename,"r");
    if(!read2)
-    prob_prop_matrix(1,g2,n2,pj);
+   {
+	   dim3 grids((n2+1)/2,1);
+	   dim3 blocks(2,1);
+    prob_prop_matrix<<<grids,blocks>>>(1,g2,n2,m,rm,rmc);
+	 cudaMemcpy(map,m,sizeof(mapping)*n1*(n1+1),cudaMemcpyDeviceToHost);
+	 for(int p=0;p<n2;p++)
+	 write(1,p,&map[1+p]);
+   }
     else
    fclose(read2);
-   iso = isotest(pi,pj,g1,g2);
-    if(iso==2)
+ }
+
+ cudaFree(m);
+  delete [] m;
+  delete [] map;
+
+  map_g = new mapping[2*n1];
+   for(pi=0;(pi<n1)&&(iso!=2);pi++)
+	for(pj=0;(pj<n2)&&(iso!=2);pj++)
+		iso = isotest(pi,pj,g1,g2);
+     
+  if(iso==2)
 {
 sprintf(filename,"../results/res_%d_%d",pi,pj);
 result=fopen(filename,"w");
@@ -366,9 +392,6 @@ fprintf(result,"\n----------------\n");
 fclose(result);
 }
   }
-  
-  }
-}
 else
 cout<<"NOT ISOMORPHIC\n";
 
