@@ -29,56 +29,35 @@ void max_heapify(float *a,mapping *pos, int i, int n)
 {
     int j, temps;
     float temp;
-    temp = a[i];
     temps = pos[i].map_ver;
+    temp = a[temps];
     j = 2*i;
     while (j <= n)
     {
-        if (j < n && a[j+1] > a[j])
+        if (j < n && a[pos[j+1].map_ver] > a[pos[j].map_ver])
             j = j+1;
-        if (temp > a[j])
+        if (temp > a[pos[j].map_ver])
             break;
-        else if (temp <= a[j])
+        else if (temp <= a[pos[j].map_ver])
         {
-            a[j/2] = a[j];
             pos[j/2].map_ver = pos[j].map_ver;
             j = 2*j;
         }
     }
-    a[j/2] = temp;
     pos[j/2].map_ver = temps;
     return;
 }
 void heapsort(float *a,mapping *pos, int end)
 {
-     cout<<"\nHeap";
-     for(int m=1;m<=end;m++)
-      cout<<a[m]<<" ";
-     cout<<"\n";
-     for(int m=1;m<=end;m++)
-      cout<<pos[m].map_ver<<" ";
-     cout<<"\n\n";
-     getch();
     int i, temps;
     float temp;
     for (i = end; i >= 2; i--)
     {
-        temp = a[i];
         temps = pos[i].map_ver;
-        a[i] = a[1];
         pos[i].map_ver = pos[1].map_ver;
-        a[1] = temp;
         pos[1].map_ver = temps;
         max_heapify(a,pos, 1, i - 1);
     }
-    cout<<"\nHeap done";
-     for(int m=1;m<=end;m++)
-      cout<<a[m]<<" ";
-     cout<<"\n";
-     for(int m=1;m<=end;m++)
-      cout<<pos[m].map_ver<<" ";
-     cout<<"\n\n";
-     getch();
 }
 void build_maxheap(float *a,mapping *pos, int end)
 {
@@ -88,7 +67,6 @@ void build_maxheap(float *a,mapping *pos, int end)
         max_heapify(a,pos, i, end);
     }
 }
-
 
 bool adj_mat_map(float *a1, float *a2)
 {
@@ -257,8 +235,9 @@ for(j=0;j<n;j++)
           j++; end++;               
          }
         if(start<end-1){
-        build_maxheap(&row_mat[start-1],&map_g[ptr-1+start],end-start);
-        heapsort(&row_mat[start-1],&map_g[ptr-1+start],end-start); //subtracting 1 from array subscript for the padding for heap sort
+           build_maxheap(row_mat,&map_g[ptr-1+start],end-start);
+           heapsort(row_mat,&map_g[ptr-1+start],end-start); //subtracting 1 from array subscript for the padding for heap sort
+ 
         flag=true;
         }                        
         start=end;
@@ -266,22 +245,8 @@ for(j=0;j<n;j++)
        
 //writing state distribution vector to probability propogation matrix
 for(j=0;j<n;j++)
- map_g[ptr+j].state=row_mat_copy[map_g[ptr+j].map_ver];
+ map_g[ptr+j].state=row_mat[map_g[ptr+j].map_ver];
  
-for(j=0;j<n;j++)
- cout<<row_mat_copy[j]<<" ";
-cout<<"\n";
-for(j=0;j<n;j++)
- cout<<map_g[j].classid;
-cout<<"\n";
-for(j=0;j<n;j++)
- cout<<map_g[j].map_ver;
- cout<<"\n";
-for(j=0;j<n;j++)
- cout<<row_mat_copy[map_g[j].map_ver];
-cout<<"\n\n";
-getch();
-
 //calculating the state distribution vector for string of next length
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
@@ -426,6 +391,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
    prob_prop_matrix(0,g1,n1,pi);
    else
   fclose(read1);
+ // cout<<"\ndone\n";
   for(pj=0;(pj<n2)&&(iso!=2);pj++)
   {
    for(int i=0;i<n1;i++)
@@ -441,14 +407,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
     else
    fclose(read2);
    iso = isotest(pi,pj,g1,g2);
-  }
-  
-  }
-}
-else
-cout<<"NOT ISOMORPHIC\n";
-
- if(iso==2)
+    if(iso==2)
 {
 sprintf(filename,"../results/res_%d_%d",pi,pj);
 result=fopen(filename,"w");
@@ -458,6 +417,14 @@ fprintf(result,"%d -> %d\n",map_g[l].map_ver,map_g[n1+l].map_ver);
 fprintf(result,"\n----------------\n");
 fclose(result);
 }
+  }
+  
+  }
+}
+else
+cout<<"NOT ISOMORPHIC\n";
+
+
 //deleting memory allocated for arrays
 delete [] g1;
 delete [] g2;
