@@ -25,7 +25,7 @@ int classid; };
 float *g1,*g2;
 int node,w_node;
 int tmp_count;
-mapping *map_g;
+mapping *map_graph;
 
 __device__ void max_heapify(float *a,mapping *pos, int i, int n)
 {
@@ -76,7 +76,7 @@ bool adj_mat_map(float *a1, float *a2)
 int i,j;
 for(i=0;i<node;i++)
  for(j=0;j<node;j++)
-  if(a1[map_g[i].map_ver*node+map_g[j].map_ver]!=a2[map_g[1*node+i].map_ver*node+map_g[1*node+j].map_ver])
+  if(a1[map_graph[i].map_ver*node+map_graph[j].map_ver]!=a2[map_graph[1*node+i].map_ver*node+map_graph[1*node+j].map_ver])
    return false;
 return true;
 }
@@ -91,11 +91,11 @@ int isotest(int p1_init_node,int p2_init_node,float *a1,float *a2)
     FILE *read2 = fopen(filename,"r");
 while(!feof(read1)){
 for(int i=0;i<node;i++)
- fscanf(read1,"%d",&map_g[i].map_ver);
+ fscanf(read1,"%d",&map_graph[i].map_ver);
 
 while(!feof(read2)){
 for(int j=0;j<node;j++)
- fscanf(read2,"%d",&map_g[1*node+j].map_ver);
+ fscanf(read2,"%d",&map_graph[1*node+j].map_ver);
 
   if(adj_mat_map(a1,a2))
  { fclose(read1);
@@ -135,20 +135,25 @@ if(c1==r2){
   c = (t-res[j])-y;
   res[j]=t;}
  }
-}}
+}
+}
 
 //calculates the probability propogation matrix for the initial state initstate
-__global__ void prob_prop_matrix(int graph_id, float *g, int n, mapping *map_g,float *row_mat,float *row_mat_copy)
+__global__ void prob_prop_matrix(int graph_id, float *g, int n, mapping *map_g,float *rm,float *rmc)
 {
+	float *row_mat,*row_mat_copy;
 	int initstate = blockIdx.x*blockDim.x+threadIdx.x;
-	int ptr = (graph_id+initstate)*n;
+if(initstate<n){
+	int ptr = initstate*n;
 	 for(int i=0;i<n;i++)
         {
         map_g[ptr+i].map_ver=i;
         map_g[ptr+i].state=-1.0;
         map_g[ptr+i].classid=0;
         }
-
+	 row_mat = &rm[ptr];
+	 row_mat_copy = &rmc[ptr];
+	 
 bool flag=true;
 int start,end,j,temp,classptr;
 float temps;
@@ -210,17 +215,7 @@ for(j=0;j<n;j++)
 //calculating the state distribution vector for string of next length
 matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
-
-start=0;
-while(start<n-1){
- if(map_g[ptr+start].classid==map_g[ptr+start+1].classid)
-  break;
- start++; }
-end=start+1;
-while(end<n-1){
- if(map_g[ptr+end].classid!=map_g[ptr+end+1].classid)
-  break;
- end++; }
+}
 }
 //returns the degree of a vertix
 int degree(float *m,int row,int n)
@@ -322,8 +317,9 @@ int main()
     #endif
 
 FILE *result;
+	float *graph1,*graph2,*rm,*rmc;
 
-int pi,pj,iso=0;
+int iso=0;
 char filename[40];
 
 get_graphs();
@@ -334,25 +330,26 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 {
 	mapping *map = new mapping[n1*(n1+1)];
     mapping *m;
-	float *graph1,*graph2,*rm,*rmc;
-	cudaMalloc((float**)&rm,sizeof(float)*n1);
-	cudaMalloc((float**)&rmc,sizeof(float)*n1);
+	cudaMalloc((float**)&rm,sizeof(float)*n1*n1);
+	cudaMalloc((float**)&rmc,sizeof(float)*n1*n1);
 	cudaMalloc((float**)&graph1,sizeof(float)*n1*n1);
 	cudaMemcpy(graph1,g1,sizeof(float)*n1*n1,cudaMemcpyHostToDevice);
 	cudaMalloc((float**)&graph2,sizeof(float)*n2*n2);
 	cudaMemcpy(graph2,g2,sizeof(float)*n2*n2,cudaMemcpyHostToDevice);
  //dynamically allocating array for probability distribution matrix
 	
-   cudaMalloc((mapping**)&m,sizeof(sizeof(mapping)*n1*(n1+1)));
- for(pi=0;(pi<n1)&&(iso!=2);pi++)
- {       
-  sprintf(filename,"../graphiso/map_%d_%d",0,pi);  
+   cudaMalloc((mapping**)&m,sizeof(mapping)*n1*n1);
+       
+  sprintf(filename,"../graphiso/map_%d_%d",0,0);  
   read1=fopen(filename,"r");
   if(!read1)
   {
-   prob_prop_matrix<<<1,1>>>(0,g1,n1,m,rm,rmc);
-   cudaMemcpy(map,m,sizeof(mapping)*n1,cudaMemcpyDeviceToHost);
-   write(0,pi,map);
+	   dim3 grids((n1+1)/2,1);
+	   dim3 blocks(2,1);
+   prob_prop_matrix<<<grids,blocks>>>(0,graph1,n1,m,rm,rmc);
+   cudaMemcpy(map,m,sizeof(mapping)*n1*n1,cudaMemcpyDeviceToHost);
+	 for(int p=0;p<n1;p++)
+	 write(0,p,&map[p*n1]);
   }
    else
   fclose(read1);
@@ -363,42 +360,44 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
    {
 	   dim3 grids((n2+1)/2,1);
 	   dim3 blocks(2,1);
-    prob_prop_matrix<<<grids,blocks>>>(1,g2,n2,m,rm,rmc);
-	 cudaMemcpy(map,m,sizeof(mapping)*n1*(n1+1),cudaMemcpyDeviceToHost);
+    prob_prop_matrix<<<grids,blocks>>>(1,graph2,n2,m,rm,rmc);
+	 cudaMemcpy(map,m,sizeof(mapping)*n2*n2,cudaMemcpyDeviceToHost);
 	 for(int p=0;p<n2;p++)
-	 write(1,p,&map[1+p]);
+	 write(1,p,&map[p*n2]);
    }
     else
    fclose(read2);
- }
 
  cudaFree(m);
-  delete [] m;
+ cudaFree(rm);
+ cudaFree(rmc);
   delete [] map;
 
-  map_g = new mapping[2*n1];
-   for(pi=0;(pi<n1)&&(iso!=2);pi++)
-	for(pj=0;(pj<n2)&&(iso!=2);pj++)
-		iso = isotest(pi,pj,g1,g2);
-     
+  map_graph = new mapping[2*n1];
+   for(int pi=0;(pi<n1)&&(iso!=2);pi++)
+	for(int pj=0;(pj<n2)&&(iso!=2);pj++){
+		iso = isotest(pi,pj,g1,g2);     
   if(iso==2)
 {
 sprintf(filename,"../results/res_%d_%d",pi,pj);
 result=fopen(filename,"w");
 fprintf(result,"ISOMORPHIC MAPPING\n");
 for(int l=0;l<n1;l++)
-fprintf(result,"%d -> %d\n",map_g[l].map_ver,map_g[n1+l].map_ver);
+fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map_graph[n1+l].map_ver);
 fprintf(result,"\n----------------\n");
 fclose(result);
 }
-  }
-else
+	}}
+
+if(iso!=2)
 cout<<"NOT ISOMORPHIC\n";
 
 //deleting memory allocated for arrays
 delete [] g1;
 delete [] g2;
-delete [] map_g;
+cudaFree(graph1);
+cudaFree(graph2);
+delete [] map_graph;
 getch();
 return 0;
 }
