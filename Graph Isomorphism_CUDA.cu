@@ -12,7 +12,18 @@
 #include<cuda_runtime.h>
 #include<direct.h>
 using namespace std;
-
+static void HandleError( cudaError_t err,
+                         const char *file,
+                         int line ) {
+    if (err != cudaSuccess) {
+		FILE *error = fopen("GPU_error.txt","w");
+        fprintf(error, "%s in %s at line %d\n", cudaGetErrorString( err ),
+                file, line );
+		fclose(error);
+        exit( EXIT_FAILURE );
+    }
+}
+#define HANDLE_ERROR( err ) (HandleError( err, __FILE__, __LINE__ ))
 
 int n1,n2,perm;
 struct mapping
@@ -100,17 +111,17 @@ for(int i=0;i<node;i++)
 for(int j=0;j<node;j++)
  fscanf(read2,"%d",&map_graph[1*node+j].map_ver);
 
-cudaMalloc((mapping**)&map,sizeof(mapping)*node*2);
-cudaMalloc((bool**)&iso,sizeof(bool));
-cudaMemcpy(map,map_graph,sizeof(mapping)*node*2,cudaMemcpyHostToDevice);
-cudaMemcpy(iso,is_iso,sizeof(bool),cudaMemcpyHostToDevice);
+HANDLE_ERROR(cudaMalloc((mapping**)&map,sizeof(mapping)*node*2));
+HANDLE_ERROR(cudaMalloc((bool**)&iso,sizeof(bool)));
+HANDLE_ERROR(cudaMemcpy(map,map_graph,sizeof(mapping)*node*2,cudaMemcpyHostToDevice));
+HANDLE_ERROR(cudaMemcpy(iso,is_iso,sizeof(bool),cudaMemcpyHostToDevice));
 
 dim3 threadsPerblock(2,2);
 dim3 blocks((node+1)/2,(node+1)/2);
 
 adj_mat_map<<<blocks,threadsPerblock>>>(a1,a2,map,iso,node);
 
-cudaMemcpy(is_iso,iso,sizeof(bool),cudaMemcpyDeviceToHost);
+HANDLE_ERROR(cudaMemcpy(is_iso,iso,sizeof(bool),cudaMemcpyDeviceToHost));
 cudaFree(map);
 cudaFree(iso);
 
@@ -344,15 +355,13 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 {
 	mapping *map = new mapping[n1*n1];
     mapping *m;
-	cudaMalloc((float**)&rm,sizeof(float)*n1*n1);
-	cudaMalloc((float**)&rmc,sizeof(float)*n1*n1);
-	cudaMalloc((float**)&graph1,sizeof(float)*n1*n1);
-	cudaMemcpy(graph1,g1,sizeof(float)*n1*n1,cudaMemcpyHostToDevice);
-	cudaMalloc((float**)&graph2,sizeof(float)*n2*n2);
-	cudaMemcpy(graph2,g2,sizeof(float)*n2*n2,cudaMemcpyHostToDevice);
- //dynamically allocating array for probability distribution matrix
-	
-   cudaMalloc((mapping**)&m,sizeof(mapping)*n1*n1);
+	HANDLE_ERROR(cudaMalloc((float**)&rm,sizeof(float)*n1*n1));
+	HANDLE_ERROR(cudaMalloc((float**)&rmc,sizeof(float)*n1*n1));
+	HANDLE_ERROR(cudaMalloc((float**)&graph1,sizeof(float)*n1*n1));
+	HANDLE_ERROR(cudaMemcpy(graph1,g1,sizeof(float)*n1*n1,cudaMemcpyHostToDevice));
+	HANDLE_ERROR(cudaMalloc((float**)&graph2,sizeof(float)*n2*n2));
+	HANDLE_ERROR(cudaMemcpy(graph2,g2,sizeof(float)*n2*n2,cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc((mapping**)&m,sizeof(mapping)*n1*n1));
        
   sprintf(filename,"../graphiso/map_%d_%d",0,0);  
   read1=fopen(filename,"r");
@@ -361,7 +370,8 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 	   dim3 grids((n1+1)/2,1);
 	   dim3 blocks(2,1);
    prob_prop_matrix<<<grids,blocks>>>(0,graph1,n1,m,rm,rmc);
-   cudaMemcpy(map,m,sizeof(mapping)*n1*n1,cudaMemcpyDeviceToHost);
+   HANDLE_ERROR( cudaPeekAtLastError() );
+   HANDLE_ERROR(cudaMemcpy(map,m,sizeof(mapping)*n1*n1,cudaMemcpyDeviceToHost));
 	 for(int p=0;p<n1;p++)
 	 write(0,p,&map[p*n1]);
   }
@@ -375,7 +385,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 	   dim3 grids((n2+1)/2,1);
 	   dim3 blocks(2,1);
     prob_prop_matrix<<<grids,blocks>>>(1,graph2,n2,m,rm,rmc);
-	 cudaMemcpy(map,m,sizeof(mapping)*n2*n2,cudaMemcpyDeviceToHost);
+	 HANDLE_ERROR(cudaMemcpy(map,m,sizeof(mapping)*n2*n2,cudaMemcpyDeviceToHost));
 	 for(int p=0;p<n2;p++)
 	 write(1,p,&map[p*n2]);
    }
