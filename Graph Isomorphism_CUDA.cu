@@ -342,7 +342,7 @@ FILE *read1,*read2;
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
-	mapping *map = new mapping[n1*(n1+1)];
+	mapping *map = new mapping[n1*n1];
     mapping *m;
 	cudaMalloc((float**)&rm,sizeof(float)*n1*n1);
 	cudaMalloc((float**)&rmc,sizeof(float)*n1*n1);
