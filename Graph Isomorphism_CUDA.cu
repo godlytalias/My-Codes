@@ -390,19 +390,20 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 	   read1=fopen(filename,"r");
 	   for(int i=0;i<n1;i++)
 		   fscanf(read1,"%d ",&map_graph[i].map_ver);
+           fclose(read1);
 	   cudaMemcpy(m_g1,map_graph,sizeof(mapping)*n1,cudaMemcpyHostToDevice);
 	for(int pj=0;(pj<n2)&&(iso!=2);pj++){
 		iso = isotest(pj,graph1,graph2,m_g1,&map[pj*node]);     
-  if(iso==2)
-{
-sprintf(filename,"../results/res_%d_%d",pi,pj);
-result=fopen(filename,"w");
-fprintf(result,"ISOMORPHIC MAPPING\n");
-for(int l=0;l<n1;l++)
-fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map[(pj*node)+l].map_ver);
-fprintf(result,"\n----------------\n");
-fclose(result);
-}
+	 if(iso==2)
+	{
+	sprintf(filename,"../results/res_%d_%d",pi,pj);
+	result=fopen(filename,"w");
+	fprintf(result,"ISOMORPHIC MAPPING\n");
+	for(int l=0;l<n1;l++)
+		fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map[(pj*node)+l].map_ver);
+	fprintf(result,"\n----------------\n");
+	fclose(result);
+	}
 	}
    }
    	cudaFree(m_g1);
