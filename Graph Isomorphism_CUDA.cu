@@ -82,52 +82,36 @@ __device__ void build_maxheap(float *a,mapping *pos, int end)
     }
 }
 
-__global__ void adj_mat_map(float *a1, float *a2,mapping *map_graph,bool *iso,int node)
+__global__ void adj_mat_map(float *a1, float *a2,mapping *map_g1,mapping *map_g2,bool *iso,int init, int node)
 {
  int i=blockIdx.x*blockDim.x+threadIdx.x;
  int j=blockIdx.y*blockDim.y+threadIdx.y;
  if(i<node && j<node){
-  if(a1[map_graph[i].map_ver*node+map_graph[j].map_ver]!=a2[map_graph[1*node+i].map_ver*node+map_graph[1*node+j].map_ver])
+  if(a1[map_g1[i].map_ver*node+map_g1[j].map_ver]!=a2[map_g2[i].map_ver*node+map_g2[j].map_ver])
   *iso=false;
  }}
 
 
-int isotest(int p1_init_node,int p2_init_node,float *a1,float *a2)
+int isotest(int p2_init_node,float *a1,float *a2,mapping *map_g1,mapping *map)
 {
-    char filename[40];
 	bool *is_iso,*iso;
 	bool val = true;
 	is_iso = &val;
-	mapping *map;
-	map_graph = new mapping[2*n1];
-    sprintf(filename,"../graphiso/map_0_%d",p1_init_node);
-    FILE *read1 = fopen(filename,"r");
-    sprintf(filename,"../graphiso/map_1_%d",p2_init_node);
-    FILE *read2 = fopen(filename,"r");
+	mapping *map_g2;
 
-for(int i=0;i<node;i++)
- fscanf(read1,"%d",&map_graph[i].map_ver);
-
-for(int j=0;j<node;j++)
- fscanf(read2,"%d",&map_graph[1*node+j].map_ver);
-
-HANDLE_ERROR(cudaMalloc((mapping**)&map,sizeof(mapping)*node*2));
 HANDLE_ERROR(cudaMalloc((bool**)&iso,sizeof(bool)));
-HANDLE_ERROR(cudaMemcpy(map,map_graph,sizeof(mapping)*node*2,cudaMemcpyHostToDevice));
+HANDLE_ERROR(cudaMalloc((mapping**)&map_g2,sizeof(mapping)*n1));
+HANDLE_ERROR(cudaMemcpy(map_g2,map,sizeof(mapping)*n1,cudaMemcpyHostToDevice));
 HANDLE_ERROR(cudaMemcpy(iso,is_iso,sizeof(bool),cudaMemcpyHostToDevice));
 
 dim3 threadsPerblock(2,2);
 dim3 blocks((node+1)/2,(node+1)/2);
 
-adj_mat_map<<<blocks,threadsPerblock>>>(a1,a2,map,iso,node);
+adj_mat_map<<<blocks,threadsPerblock>>>(a1,a2,map_g1,map_g2,iso,p2_init_node,node);
 
 HANDLE_ERROR(cudaMemcpy(is_iso,iso,sizeof(bool),cudaMemcpyDeviceToHost));
-cudaFree(map);
 cudaFree(iso);
-
- fclose(read1);
-   fclose(read2);
-
+cudaFree(map_g2);
   if(*is_iso)
 	return 2;
   else
@@ -349,11 +333,12 @@ char filename[40];
 
 get_graphs();
 
+mapping *map;
 FILE *read1,*read2;
 
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
-	mapping *map = new mapping[n1*n1];
+	map = new mapping[n1*n1];
     mapping *m;
 	HANDLE_ERROR(cudaMalloc((float**)&rm,sizeof(float)*n1*n1));
 	HANDLE_ERROR(cudaMalloc((float**)&rmc,sizeof(float)*n1*n1));
@@ -395,23 +380,33 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
  cudaFree(m);
  cudaFree(rm);
  cudaFree(rmc);
-  delete [] map;
 
+ mapping *m_g1;
+  map_graph = new mapping[node];
+	   HANDLE_ERROR(cudaMalloc((mapping**)&m_g1,sizeof(mapping)*n1));
 
-   for(int pi=0;(pi<n1)&&(iso!=2);pi++)
+   for(int pi=0;(pi<n1)&&(iso!=2);pi++){
+	   sprintf(filename,"../graphiso/map_%d_%d",0,pi);
+	   read1=fopen(filename,"r");
+	   for(int i=0;i<n1;i++)
+		   fscanf(read1,"%d ",&map_graph[i].map_ver);
+	   cudaMemcpy(m_g1,map_graph,sizeof(mapping)*n1,cudaMemcpyHostToDevice);
 	for(int pj=0;(pj<n2)&&(iso!=2);pj++){
-		iso = isotest(pi,pj,graph1,graph2);     
+		iso = isotest(pj,graph1,graph2,m_g1,&map[pj*node]);     
   if(iso==2)
 {
 sprintf(filename,"../results/res_%d_%d",pi,pj);
 result=fopen(filename,"w");
 fprintf(result,"ISOMORPHIC MAPPING\n");
 for(int l=0;l<n1;l++)
-fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map_graph[n1+l].map_ver);
+fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map[(pj*node)+l].map_ver);
 fprintf(result,"\n----------------\n");
 fclose(result);
 }
-	}}
+	}
+   }
+   	cudaFree(m_g1);
+}
 
 if(iso!=2)
 cout<<"NOT ISOMORPHIC\n";
@@ -421,6 +416,7 @@ delete [] g1;
 delete [] g2;
 cudaFree(graph1);
 cudaFree(graph2);
+delete [] map;
 delete [] map_graph;
 getch();
 return 0;
