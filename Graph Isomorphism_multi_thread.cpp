@@ -339,7 +339,7 @@ int iso=0;
 char filename[40];
 
 get_graphs();
-pthread_t threads[node];
+pthread_t threads[32];
 
 FILE *read1,*read2;
 
@@ -351,18 +351,21 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
   read1=fopen(filename,"r");
   if(!read1)
   {
- ob = new parameters[n1];
-  for(int k=0;k<node;k++)
+ ob = new parameters[32];
+for(int l=0;l<node;l+=32)
+{
+  for(int k=0;k<32 && (l+k)<node;k++)
 {
   ob[k].graph_id=0;
   ob[k].g=g1;
   ob[k].n=n1;
-  ob[k].initstate=k;
+  ob[k].initstate=l+k;
   pthread_create(&threads[k],NULL,prob_prop_matrix,(void*)&ob[k]);
 }
 
- for(int k=0;k<node;k++)
+ for(int k=0;k<32 && (l+k)<node;k++)
   pthread_join(threads[k],&status);
+}
  
  delete [] ob;
   }
@@ -373,19 +376,23 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
    read2=fopen(filename,"r");
    if(!read2)
    {
- ob = new parameters[n2];
-  for(int k=0;k<node;k++)
+ ob = new parameters[32];
+
+for(int l=0;l<node;l+=32)
+{
+  for(int k=0;k<32 && (l+k)<node;k++)
 {
   ob[k].graph_id=1;
   ob[k].g=g2;
   ob[k].n=n2;
-  ob[k].initstate=k;
+  ob[k].initstate=l+k;
   pthread_create(&threads[k],NULL,prob_prop_matrix,(void*)&ob[k]);
 }
 
- for(int k=0;k<node;k++)
+ for(int k=0;k<32 && (l+k)<node;k++)
   pthread_join(threads[k],&status);
  
+}
  delete [] ob;
    }
     else
