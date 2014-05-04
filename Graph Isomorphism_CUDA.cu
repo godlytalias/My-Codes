@@ -13,20 +13,22 @@
 #include<cuda_runtime.h>
 #include<direct.h>
 using namespace std;
+
 static void HandleError( cudaError_t err,
                          const char *file,
                          int line ) {
     if (err != cudaSuccess) {
-		FILE *error = fopen("GPU_error.txt","w");
-        fprintf(error, "%s in %s at line %d\n", cudaGetErrorString( err ),
-                file, line );
-		fclose(error);
+        FILE *error = fopen("GPU_error.txt","w");
+        fprintf(error, "%s in %s at line %d\n", cudaGetErrorString( err ), file, line );
+	fclose(error);
         exit( EXIT_FAILURE );
     }
 }
+
 #define HANDLE_ERROR( err ) (HandleError( err, __FILE__, __LINE__ ))
 
 int n1,n2,perm;
+
 struct mapping
 {
 int map_ver;
@@ -118,17 +120,17 @@ __device__ void matrix_prod(float *res,float *m1,int c1,float *m2,int r2,int c2)
 {
 float y,t,c;
 if(c1==r2){
- for(int j=0;j<c2;j++){
- res[j]=0;
- c=0.0;
-  for(int k=0;k<c1;k++){
+    for(int j=0;j<c2;j++){
+        res[j]=0;
+        c=0.0;
+        for(int k=0;k<c1;k++){
 //kahan summation to avoid precision lose
-  y=(m1[k]*m2[k*c2+j])-c;
-  t=res[j]+y;
-  c = (t-res[j])-y;
-  res[j]=t;}
- }
-}
+            y=(m1[k]*m2[k*c2+j])-c;
+            t=res[j]+y;
+            c = (t-res[j])-y;
+            res[j]=t;}
+        }
+    }
 }
 
 //calculates the probability propogation matrix for the initial state initstate
@@ -137,15 +139,15 @@ __global__ void prob_prop_matrix(int graph_id, float *g, int n, mapping *map_g,f
 	float *row_mat,*row_mat_copy;
 	int initstate = blockIdx.x*blockDim.x+threadIdx.x;
 if(initstate<n){
-	int ptr = initstate*n;
-	 for(int i=0;i<n;i++)
+    int ptr = initstate*n;
+    for(int i=0;i<n;i++)
         {
         map_g[ptr+i].map_ver=i;
         map_g[ptr+i].state=-1.0;
         map_g[ptr+i].classid=0;
         }
-	 row_mat = &rm[ptr];
-	 row_mat_copy = &rmc[ptr];
+    row_mat = &rm[ptr];
+    row_mat_copy = &rmc[ptr];
 	 
 bool flag=true;
 int start,end,j,temp,classptr;
@@ -156,11 +158,11 @@ istate_dibn_vec(row_mat,initstate,n);
 classptr=1;
 for(int i=0;flag && i<((2*n)-1);i++)
 {
-for(j=0;j<n;j++)
- row_mat_copy[j]=row_mat[j];
-        j=1;
+    for(j=0;j<n;j++)
+        row_mat_copy[j]=row_mat[j];
+    j=1;
         //this loop gives different class id to vertices with same class id but different state
-        while(j<n)
+    while(j<n)
         {
         if(map_g[ptr+j].classid==map_g[ptr+j-1].classid)
         {
@@ -186,19 +188,18 @@ for(j=0;j<n;j++)
         flag=false;
         while(j<n)
         {
-        end=start+1;
-        j++;
-        while(j<n && map_g[ptr+end].classid==map_g[ptr+start].classid)
-        {
-          j++; end++;               
-         }
-        if(start<end-1){
-           build_maxheap(row_mat,&map_g[ptr-1+start],end-start);
-           heapsort(row_mat,&map_g[ptr-1+start],end-start); //subtracting 1 from array subscript for the padding for heap sort
- 
-        flag=true;
-        }                        
-        start=end;
+            end=start+1;
+            j++;
+            while(j<n && map_g[ptr+end].classid==map_g[ptr+start].classid)
+                {
+                j++; end++;               
+                }
+            if(start<end-1){
+               build_maxheap(row_mat,&map_g[ptr-1+start],end-start);
+               heapsort(row_mat,&map_g[ptr-1+start],end-start); //subtracting 1 from array subscript for the padding for heap sort
+               flag=true;
+            }                        
+            start=end;
         }
        
 //writing state distribution vector to probability propogation matrix
@@ -210,13 +211,15 @@ matrix_prod(row_mat,row_mat_copy,n,g,n,n);
 }
 }
 }
+
+
 //returns the degree of a vertix
 int degree(float *m,int row,int n)
 {
 int deg=0;
 int base_ptr=row*n;
 for(int i=0;i<n;i++){
-deg+=(int)m[base_ptr+i];}
+    deg+=(int)m[base_ptr+i];}
 return deg;
 }
 
@@ -226,11 +229,11 @@ void prob_dibn(float *m,int n)
 int deg;
 for(int i=0;i<n;i++){
  deg = degree(m,i,n);
- for(int j=0;j<n;j++)
- {
- m[i*n+j]/=deg;
+  for(int j=0;j<n;j++)
+  {
+   m[i*n+j]/=deg;
+  }
  }
-}
 }
 
 void write(int graph_id,int initstate,mapping *map_g)
@@ -238,7 +241,7 @@ void write(int graph_id,int initstate,mapping *map_g)
 	char file_name[40];
 	sprintf(file_name,"../graphiso/map_%d_%d",graph_id,initstate);
 FILE *write = fopen(file_name,"w");
-	for(int i=0;i<node;i++)
+ for(int i=0;i<node;i++)
   fprintf(write,"%d ",map_g[i].map_ver);
  fprintf(write,"\n");   
 fclose(write);
@@ -332,7 +335,7 @@ if(n1==n2) //if number of vertices of both graphs are not equal then not isomorp
 	HANDLE_ERROR(cudaMemcpy(graph1,g1,sizeof(float)*n1*n1,cudaMemcpyHostToDevice));
 	HANDLE_ERROR(cudaMalloc((float**)&graph2,sizeof(float)*n2*n2));
 	HANDLE_ERROR(cudaMemcpy(graph2,g2,sizeof(float)*n2*n2,cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc((mapping**)&m,sizeof(mapping)*n1*n1));
+        HANDLE_ERROR(cudaMalloc((mapping**)&m,sizeof(mapping)*n1*n1));
        
 	
 delete [] g1;
@@ -344,14 +347,16 @@ delete [] g2;
   {
 	   dim3 grids((n1+1)/2,1);
 	   dim3 blocks(2,1);
+  
    prob_prop_matrix<<<grids,blocks>>>(0,graph1,n1,m,rm,rmc);
+   
    HANDLE_ERROR( cudaPeekAtLastError() );
    HANDLE_ERROR(cudaMemcpy(map,m,sizeof(mapping)*n1*n1,cudaMemcpyDeviceToHost));
 	 for(int p=0;p<n1;p++)
-	 write(0,p,&map[p*n1]);
+	     write(0,p,&map[p*n1]);
   }
    else
-  fclose(read1);
+    fclose(read1);
 
    sprintf(filename,"../graphiso/map_%d_%d",1,0);
    read2=fopen(filename,"r");
@@ -359,13 +364,15 @@ delete [] g2;
    {
 	   dim3 grids((n2+1)/2,1);
 	   dim3 blocks(2,1);
+   
     prob_prop_matrix<<<grids,blocks>>>(1,graph2,n2,m,rm,rmc);
-   HANDLE_ERROR( cudaPeekAtLastError() );
+   
+         HANDLE_ERROR( cudaPeekAtLastError() );
 	 HANDLE_ERROR(cudaMemcpy(map,m,sizeof(mapping)*n2*n2,cudaMemcpyDeviceToHost));
-	 for(int p=0;p<n2;p++)
+     for(int p=0;p<n2;p++)
 	 write(1,p,&map[p*n2]);
    }
-    else
+else
    fclose(read2);
 
  cudaFree(rm);
@@ -389,11 +396,13 @@ delete [] g2;
 	   HANDLE_ERROR(cudaMemcpy(isonode,iso,sizeof(int),cudaMemcpyHostToDevice));
 	   dim3 grids((n1+1)/2,1);
 	   dim3 threads(2,1);
+	
 		isotest<<<grids,threads>>>(graph1,graph2,m_g1,m,isonode,node);     
-   HANDLE_ERROR( cudaPeekAtLastError() );
+          
+          HANDLE_ERROR( cudaPeekAtLastError() );
 	  HANDLE_ERROR(cudaMemcpy(iso,isonode,sizeof(int),cudaMemcpyDeviceToHost));
 	  HANDLE_ERROR(cudaFree(isonode));
-  if(ison>=0)
+if(ison>=0)
 {
 sprintf(filename,"../results/res_%d_%d",pi,ison);
 result=fopen(filename,"w");
