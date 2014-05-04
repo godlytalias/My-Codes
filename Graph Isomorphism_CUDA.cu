@@ -88,7 +88,7 @@ __device__ bool adj_mat_map(float *a1, float *a2,mapping *map1,mapping *map2,int
 int i,j;
 for(i=0;i<n;i++)
  for(j=0;j<n;j++)
-  if(a1[map1[i].map_ver*n+map1[j].map_ver]!=a2[map2[j].map_ver*n+map2[j].map_ver])
+  if(a1[map1[i].map_ver*n+map1[j].map_ver]!=a2[map2[i].map_ver*n+map2[j].map_ver])
    return false;
 return true;
 }
@@ -98,8 +98,8 @@ __global__ void isotest(float *a1,float *a2,mapping *map1,mapping *map2,int *iso
 {
 	int id = threadIdx.x+blockIdx.x*blockDim.x;
  if(id<n)
-  if(adj_mat_map(a1,a2,map1,&map2[id],n))
-   *isonode=id;      
+  if(adj_mat_map(a1,a2,map1,&map2[id*n],n))
+   *isonode=id;
 }
 
 
@@ -301,7 +301,7 @@ prob_dibn(g2,n2); //g2 is converted to the probability distribution matrix of gr
 
 int main()
 {
-	double start = time(0);
+	time_t start = time(0);
     #if defined(_WIN32)
     _mkdir("../graphiso");
     _mkdir("../results");
@@ -390,7 +390,7 @@ delete [] g2;
 	   dim3 grids((n1+1)/2,1);
 	   dim3 threads(2,1);
 		isotest<<<grids,threads>>>(graph1,graph2,m_g1,m,isonode,node);     
-   	  HANDLE_ERROR( cudaPeekAtLastError() );
+   HANDLE_ERROR( cudaPeekAtLastError() );
 	  HANDLE_ERROR(cudaMemcpy(iso,isonode,sizeof(int),cudaMemcpyDeviceToHost));
 	  HANDLE_ERROR(cudaFree(isonode));
   if(ison>=0)
@@ -416,7 +416,7 @@ cudaFree(graph2);
 cudaFree(m);
 delete [] map;
 delete [] map_graph;
-double end = time(0);
+time_t end = time(0);
 cout<<"Time taken - "<<end-start;
 getch();
 return 0;
