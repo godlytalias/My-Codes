@@ -41,6 +41,7 @@ mapping *map_graph;
 int node,w_node;
 int tmp_count;
 
+//max heapify part of heap sort
 __device__ void max_heapify(float *a,mapping *pos, int i, int n)
 {
     int j, temps;
@@ -64,6 +65,7 @@ __device__ void max_heapify(float *a,mapping *pos, int i, int n)
     return;
 }
 
+//sorts the given array a and stores the mappings in pos
 __device__ void heapsort(float *a,mapping *pos, int end)
 {
     int i, temps;
@@ -85,23 +87,25 @@ __device__ void build_maxheap(float *a,mapping *pos, int end)
     }
 }
 
+//check whether map1(a1) == map2(a2) for all elements
 __device__ bool adj_mat_map(float *a1, float *a2,mapping *map1,mapping *map2,int n)
 {
 int i,j;
 for(i=0;i<n;i++)
- for(j=0;j<n;j++)
-  if(a1[map1[i].map_ver*n+map1[j].map_ver]!=a2[map2[i].map_ver*n+map2[j].map_ver])
-   return false;
+    for(j=0;j<n;j++)
+        if(a1[map1[i].map_ver*n+map1[j].map_ver]!=a2[map2[i].map_ver*n+map2[j].map_ver])
+            return false;
 return true;
 }
 
-
+//check whether both the probability propogation matrices are isomorphic and
+//if isomorphic put the number of the initial node to the variable isonode
 __global__ void isotest(float *a1,float *a2,mapping *map1,mapping *map2,int *isonode,int n)
 {
 	int id = threadIdx.x+blockIdx.x*blockDim.x;
  if(id<n)
-  if(adj_mat_map(a1,a2,map1,&map2[id*n],n))
-   *isonode=id;
+     if(adj_mat_map(a1,a2,map1,&map2[id*n],n))
+         *isonode=id;
 }
 
 
@@ -236,15 +240,16 @@ for(int i=0;i<n;i++){
  }
 }
 
+//writes the mappings to file
 void write(int graph_id,int initstate,mapping *map_g)
 {
 	char file_name[40];
 	sprintf(file_name,"../graphiso/map_%d_%d",graph_id,initstate);
 FILE *write = fopen(file_name,"w");
  for(int i=0;i<node;i++)
-  fprintf(write,"%d ",map_g[i].map_ver);
+     fprintf(write,"%d ",map_g[i].map_ver);
  fprintf(write,"\n");   
-fclose(write);
+ fclose(write);
 }
 
 void get_graphs()
@@ -254,24 +259,24 @@ void get_graphs()
      FILE *f = fopen("g1.txt","r");
       n1=0;n2=0;
          //checking the no: of nodes in the graph 1
-		 while(ch!='\n')
-         {
-         ch = fgetc(f);
-          if(ch>=48 && ch<=57 && mode==0)
-           {
-             mode=1;
-               n1++;
-            }
-             else if(ch<48 || ch>57)
-              mode=0;
-          }
+    while(ch!='\n')
+    {
+        ch = fgetc(f);
+        if(ch>=48 && ch<=57 && mode==0)
+        {
+            mode=1;
+            n1++;
+        }
+        else if(ch<48 || ch>57)
+            mode=0;
+    }
           node=n1;
           //initializing graph 1 and inputing values
          g1 = new float[n1*n1];
          fseek(f,0,SEEK_SET);
          for(int i=0;i<n1;i++)
-         for(int j=0;j<n1;j++)
-         fscanf(f,"%f ",&g1[i*n1+j]);
+             for(int j=0;j<n1;j++)
+                 fscanf(f,"%f ",&g1[i*n1+j]);
          fclose(f);
          ch=' ';
 mode=0;
@@ -280,27 +285,27 @@ f = fopen("g2.txt","r");
 //first checking the no: of elements in a row
 while(ch!='\n')
 {
-ch = fgetc(f);
- if(ch>=48 && ch<=57 && mode==0)
- {
-  mode=1;
-  n2++;
- }
- else if(ch==' ')
-  mode=0;
+    ch = fgetc(f);
+    if(ch>=48 && ch<=57 && mode==0)
+    {
+        mode=1;
+        n2++;
+    }
+    else if(ch==' ')
+        mode=0;
 }
          g2 = new float[n2*n2];
          fseek(f,0,SEEK_SET);
          for(int i=0;i<n2;i++)
-         for(int j=0;j<n2;j++)
-         fscanf(f,"%f ",&g2[i*n2+j]);
+             for(int j=0;j<n2;j++)
+                 fscanf(f,"%f ",&g2[i*n2+j]);
          
          fclose(f); 
          
          //computing probability distribution matrices of both graphs
 prob_dibn(g1,n1); //g1 is converted to the probability distribution matrix of graph 1
 prob_dibn(g2,n2); //g2 is converted to the probability distribution matrix of graph 2          
-     }
+}
 
 int main()
 {
@@ -314,13 +319,15 @@ int main()
     #endif
 
 FILE *result;
-	float *graph1,*graph2,*rm,*rmc;
+float *graph1,*graph2,*rm,*rmc;
 
 int *iso,ison;
 char filename[40];
 int *isonode;
 mapping *m;
 
+//get the graphs from the respective files and 
+//calculate its probability distribution matrix
 get_graphs();
 
 mapping *map;
@@ -329,30 +336,33 @@ FILE *read1,*read2;
 if(n1==n2) //if number of vertices of both graphs are not equal then not isomorphic
 {
 	map = new mapping[n1*n1];
-	HANDLE_ERROR(cudaMalloc((float**)&rm,sizeof(float)*n1*n1));
-	HANDLE_ERROR(cudaMalloc((float**)&rmc,sizeof(float)*n1*n1));
-	HANDLE_ERROR(cudaMalloc((float**)&graph1,sizeof(float)*n1*n1));
+	HANDLE_ERROR(cudaMalloc((float**)&rm,sizeof(float)*n1*n1));  //for copying each row of probability propogation matrix
+	HANDLE_ERROR(cudaMalloc((float**)&rmc,sizeof(float)*n1*n1)); //copy of rm for getting matrix product with each row
+	HANDLE_ERROR(cudaMalloc((float**)&graph1,sizeof(float)*n1*n1)); //adjacency matrix of 1st graph
 	HANDLE_ERROR(cudaMemcpy(graph1,g1,sizeof(float)*n1*n1,cudaMemcpyHostToDevice));
-	HANDLE_ERROR(cudaMalloc((float**)&graph2,sizeof(float)*n2*n2));
+	HANDLE_ERROR(cudaMalloc((float**)&graph2,sizeof(float)*n2*n2)); //adjacency matrix of 2nd graph
 	HANDLE_ERROR(cudaMemcpy(graph2,g2,sizeof(float)*n2*n2,cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMalloc((mapping**)&m,sizeof(mapping)*n1*n1));
        
-	
+//after allocating memory in GPU graphs are no
+//more to be stored in the RAM
 delete [] g1;
 delete [] g2;
 
   sprintf(filename,"../graphiso/map_%d_%d",0,0);  
   read1=fopen(filename,"r");
-  if(!read1)
+  if(!read1) //checks whether the mappings had already been created
   {
 	   dim3 grids((n1+1)/2,1);
 	   dim3 blocks(2,1);
   
-   prob_prop_matrix<<<grids,blocks>>>(0,graph1,n1,m,rm,rmc);
+   prob_prop_matrix<<<grids,blocks>>>(0,graph1,n1,m,rm,rmc); //invokes the kernel for finding probability
+   							     //propogation matrices for 1st graph
    
    HANDLE_ERROR( cudaPeekAtLastError() );
    HANDLE_ERROR(cudaMemcpy(map,m,sizeof(mapping)*n1*n1,cudaMemcpyDeviceToHost));
-	 for(int p=0;p<n1;p++)
+   
+	 for(int p=0;p<n1;p++) //writes the mappings to file
 	     write(0,p,&map[p*n1]);
   }
    else
@@ -360,7 +370,7 @@ delete [] g2;
 
    sprintf(filename,"../graphiso/map_%d_%d",1,0);
    read2=fopen(filename,"r");
-   if(!read2)
+   if(!read2) //checks whether the mappings had already been created
    {
 	   dim3 grids((n2+1)/2,1);
 	   dim3 blocks(2,1);
@@ -372,52 +382,54 @@ delete [] g2;
      for(int p=0;p<n2;p++)
 	 write(1,p,&map[p*n2]);
    }
-else
-   fclose(read2);
+   else
+       fclose(read2);
 
  cudaFree(rm);
  cudaFree(rmc);
 
  mapping *m_g1;
-  map_graph = new mapping[node];
+ map_graph = new mapping[node];
 	   HANDLE_ERROR(cudaMalloc((mapping**)&m_g1,sizeof(mapping)*n1));
 
-	   ison=-1;
-	   iso=&ison;
+ ison=-1;
+ iso=&ison;
 
-   for(int pi=0;(pi<n1)&&(*iso<0);pi++){
-	   sprintf(filename,"../graphiso/map_%d_%d",0,pi);
-	   read1=fopen(filename,"r");
-	   for(int i=0;i<n1;i++)
-		   fscanf(read1,"%d ",&map_graph[i].map_ver);
-	   fclose(read1);
+ for(int pi=0;(pi<n1)&&(*iso<0);pi++){
+     sprintf(filename,"../graphiso/map_%d_%d",0,pi);
+     read1=fopen(filename,"r");
+     for(int i=0;i<n1;i++)
+         fscanf(read1,"%d ",&map_graph[i].map_ver);
+     fclose(read1);
+     //copies the mapping of pi-th node of graph 1 to GPU
 	   HANDLE_ERROR(cudaMemcpy(m_g1,map_graph,sizeof(mapping)*n1,cudaMemcpyHostToDevice));
 	   HANDLE_ERROR(cudaMalloc((int**)&isonode,sizeof(int)));
 	   HANDLE_ERROR(cudaMemcpy(isonode,iso,sizeof(int),cudaMemcpyHostToDevice));
-	   dim3 grids((n1+1)/2,1);
-	   dim3 threads(2,1);
-	
+     dim3 grids((n1+1)/2,1);
+     dim3 threads(2,1);
+	//checks whether there is an isomorphic mapping
 		isotest<<<grids,threads>>>(graph1,graph2,m_g1,m,isonode,node);     
           
           HANDLE_ERROR( cudaPeekAtLastError() );
 	  HANDLE_ERROR(cudaMemcpy(iso,isonode,sizeof(int),cudaMemcpyDeviceToHost));
 	  HANDLE_ERROR(cudaFree(isonode));
-if(ison>=0)
-{
-sprintf(filename,"../results/res_%d_%d",pi,ison);
-result=fopen(filename,"w");
-fprintf(result,"ISOMORPHIC MAPPING\n");
-for(int l=0;l<n1;l++)
-fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map[(ison*node)+l].map_ver);
-fprintf(result,"\n----------------\n");
-fclose(result);
-}
+	  
+     if(ison>=0)
+     {
+         sprintf(filename,"../results/res_%d_%d",pi,ison);
+         result=fopen(filename,"w");
+         fprintf(result,"ISOMORPHIC MAPPING\n");
+         for(int l=0;l<n1;l++)
+             fprintf(result,"%d -> %d\n",map_graph[l].map_ver,map[(ison*node)+l].map_ver);
+         fprintf(result,"\n----------------\n");
+         fclose(result);
+     }
    }
 
    	cudaFree(m_g1);
 }
 if(*iso<0)
-cout<<"NOT ISOMORPHIC\n";
+    cout<<"NOT ISOMORPHIC\n";
 
 //deleting memory allocated for arrays
 cudaFree(graph1);
