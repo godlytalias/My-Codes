@@ -6,12 +6,11 @@
 // either version 3 of the License, or (at your option) any later version.
 
 #include<iostream>
-#include<conio.h>
 #include<fstream>
 #include<cuda.h>
 #include<time.h>
 #include<cuda_runtime.h>
-#include<direct.h>
+#include<sys/stat.h>
 using namespace std;
 
 static void HandleError( cudaError_t err,
@@ -439,6 +438,5 @@ delete [] map;
 delete [] map_graph;
 time_t end = time(0);
 cout<<"Time taken - "<<end-start;
-getch();
 return 0;
 }
