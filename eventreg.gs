@@ -8,7 +8,7 @@
 function onFormSubmit(e) {
 
   var SHEETNAME = 'editedresponse';
-  var AGEGROUP = [10, 15, 20, 25, 30];  //upper age limit of each age group (inclusive)
+  var AGEGROUP = [10, 15, 20, 25, 30];  //upper age limit of each age group (inclusive) (should be in sorted order)
   var TEACHERCOUNT = [5, 5, 5, 5, 5];   //Number of teachers available for each agegroup
     
   var age = e.namedValues['Age'];
@@ -18,7 +18,7 @@ function onFormSubmit(e) {
  
   var ageGroupPos = 0;
   var i;
-  for (;age < AGEGROUP[ageGroupPos]; ageGroupPos++);
+  for (;age > AGEGROUP[ageGroupPos]; ageGroupPos++);
   Logger.log("Age group pos : " + ageGroupPos);
 
   var ageGroupRow = 2;
